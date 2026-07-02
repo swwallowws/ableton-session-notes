@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lyrics</title>
+    <style>
+      :root {
+        --bg: #2b2b2b;
+        --text: #cfcfcf;
+        --muted: #808080;
+        --line: #363636;
+        --field: #303030;
+        --field-hover: #383838;
+        --accent: #ff8b3d;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font: 11px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        display: flex;
+        flex-direction: column;
+        -webkit-font-smoothing: antialiased;
+      }
+      .view { flex: 1 1 auto; min-height: 0; overflow: auto; }
+      textarea {
+        display: block; width: 100%; height: 100%;
+        resize: none; background: transparent; color: var(--text);
+        caret-color: var(--accent); border: 0; outline: 0;
+        padding: 14px 16px;
+        font: 13px/1.7 ui-monospace, "SF Mono", Menlo, monospace;
+      }
+      textarea::placeholder { color: var(--muted); }
+      textarea::selection { background: rgba(255, 139, 61, 0.28); }
+
+      .md { padding: 14px 16px; font-size: 13px; line-height: 1.7; cursor: text; }
+      #preview { min-height: 100%; }   /* fill the view so the whole empty note is clickable */
+      .md:empty::before { content: "Click here to start writing…"; color: var(--muted); }
+      .md h1, .md h2, .md h3 { font-weight: 600; line-height: 1.3; margin: 14px 0 6px; }
+      .md h1 { font-size: 17px; }
+      .md h2 { font-size: 15px; }
+      .md h3 { font-size: 13px; color: var(--muted); }
+      .md > :first-child { margin-top: 0; }
+      .md p { margin: 0 0 10px; }
+      .md ul, .md ol { margin: 0 0 10px; padding-left: 20px; }
+      .md li { margin: 2px 0; }
+      .md li.task { list-style: none; margin-left: -18px; display: flex; align-items: baseline; gap: 7px; }
+      .md li.task input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+      .md li.task.done { color: var(--muted); text-decoration: line-through; }
+      .md blockquote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 2px solid #4a4a4a; color: var(--muted); }
+      .md code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #333; padding: 1px 4px; border-radius: 2px; }
+      .md a { color: var(--accent); text-decoration: none; }
+      .md hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+
+      .help {
+        position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.45);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .help[hidden] { display: none; }
+      .help-card {
+        background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+        padding: 14px 16px; width: min(440px, 90%); max-height: 84%; overflow: auto;
+        box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+      }
+      .help-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+      .help-top strong { font-size: 13px; }
+      .help-how { color: var(--muted); margin: 0 0 12px; font-size: 12px; line-height: 1.55; }
+      .help-cheat { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+      .help-cheat th {
+        text-align: left; color: var(--muted); font-weight: 500; font-size: 10px;
+        padding: 0 8px 6px;
+      }
+      .help-cheat td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: top; width: 50%; }
+      .help-cheat td.raw code {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
+        background: #333; padding: 1px 5px; border-radius: 2px; color: var(--text);
+        display: inline-block; line-height: 1.7;
+      }
+      .help-cheat td.md { line-height: 1.4; }
+      .help-cheat td.md h1, .help-cheat td.md h2, .help-cheat td.md h3 { font-size: 13px; margin: 0; color: var(--text); font-weight: 600; }
+      .help-cheat td.md p, .help-cheat td.md ul, .help-cheat td.md ol { margin: 0; }
+      .help-cheat td.md ul, .help-cheat td.md ol { padding-left: 16px; }
+      .help-cheat td.md li { margin: 0; }
+      .help-cheat td.md li.task { margin-left: -14px; }
+      .help-cheat td.md input { pointer-events: none; }
+      .help-cheat td.md a { color: var(--accent); text-decoration: none; pointer-events: none; }
+      .pathbar {
+        flex: 0 0 auto; display: flex; align-items: center;
+        padding: 5px 12px; border-top: 1px solid var(--line);
+        font: 11px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+        color: var(--muted); cursor: text;
+      }
+      .pathbar[hidden] { display: none; }
+      .pathbar .p { flex: 1 1 auto; overflow-x: auto; white-space: nowrap; user-select: text; }
+      .bar {
+        display: flex; align-items: center; justify-content: space-between;
+        height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
+        flex: 0 0 auto; user-select: none;
+      }
+      .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .tools { display: flex; align-items: center; gap: 2px; }
+      .nb {
+        font: inherit; color: var(--text); background: var(--field);
+        border: 1px solid var(--line); border-radius: 2px; padding: 3px 6px; max-width: 170px;
+      }
+      .nb:hover { background: var(--field-hover); }
+      .count { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; margin-right: 4px; }
+      .actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+      button {
+        font: inherit; padding: 4px 12px; border: 1px solid var(--line);
+        border-radius: 2px; background: var(--field); color: var(--text); cursor: pointer;
+      }
+      button:hover { background: var(--field-hover); }
+      button.primary { border-color: #4a4a4a; }
+      button.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+      button.ghost:hover { color: var(--text); background: var(--field); }
+      button.icon.on { color: var(--accent); background: var(--field); }
+      button.icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; }
+      button.icon svg { display: block; }
+      /* instant custom tooltip (native title has a ~1s delay we can't change) */
+      [data-tip] { position: relative; }
+      [data-tip]:hover::after {
+        content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%;
+        transform: translateX(-50%); white-space: nowrap; background: #1c1c1c; color: var(--text);
+        border: 1px solid var(--line); padding: 3px 7px; border-radius: 3px; font-size: 10px;
+        pointer-events: none; z-index: 10;
+      }
+      /* anchor edge tooltips inward so they never overflow the window — no wrapping */
+      [data-tip].tip-left:hover::after { left: 0; right: auto; transform: none; }
+      [data-tip].tip-right:hover::after { left: auto; right: 0; transform: none; }
+    </style>
+  </head>
+  <body>
+    <div class="view">
+      <div class="md" id="preview"></div>
+      <textarea id="pad" placeholder="Capture lyrics, ideas and to-dos…" spellcheck="true"></textarea>
+    </div>
+    <div class="pathbar" id="pathbar" hidden><span class="p" id="pathtext"></span></div>
+    <div class="bar">
+      <div class="left">
+        <select class="nb tip-left" id="notebook"></select>
+        <input class="nb" id="newnb" hidden placeholder="name this notebook" />
+        <span class="tools">
+          <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
+          <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+          <button id="helpBtn" class="icon ghost tip-left" data-tip="Markdown help" aria-label="Markdown help">?</button>
+        </span>
+      </div>
+      <div class="actions">
+        <span class="count" id="count">0 words</span>
+        <button id="discard" class="tip-right" data-tip="Discard edits & close" aria-label="Revert">Revert</button>
+        <button id="save" class="primary tip-right" data-tip="Save & close (⌘S / Esc)" aria-label="Done">Done</button>
+      </div>
+    </div>
+
+    <div class="help" id="help" hidden>
+      <div class="help-card">
+        <div class="help-top">
+          <strong>Markdown &amp; how it works</strong>
+          <button id="helpClose" class="icon ghost" aria-label="Close help">✕</button>
+        </div>
+        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View.</p>
+        <table class="help-cheat">
+          <thead><tr><th>type this</th><th>see this</th></tr></thead>
+          <tbody id="cheatBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      // Replaced by the extension with the state object.
+      const STATE = '__STATE__';
+
+      const pad = document.getElementById("pad");
+      const preview = document.getElementById("preview");
+      const count = document.getElementById("count");
+      const modeBtn = document.getElementById("mode");
+      const nbSelect = document.getElementById("notebook");
+      const newNb = document.getElementById("newnb");
+      let renameOpt = null;   // the "Rename…" entry inside the dropdown
+
+      // contents keyed by dropdown value ("__project__" for the project file, or
+      // a notebook name). One unified picker for project + all notebooks.
+      const contents = {};
+      const hasProject = !!(STATE && STATE.projectName != null);
+      if (hasProject) contents["__project__"] = STATE.projectContent || "";
+      if (STATE && STATE.notebookContents) for (const k in STATE.notebookContents) contents[k] = STATE.notebookContents[k];
+
+      let current = (STATE && STATE.current) || "General";
+      if (!(current in contents)) contents[current] = "";
+      pad.value = contents[current] || "";
+
+      if (hasProject) nbSelect.appendChild(new Option("📁 " + STATE.projectName, "__project__"));
+      for (const name of (STATE && STATE.notebooks ? STATE.notebooks : [])) nbSelect.appendChild(new Option(name, name));
+      renameOpt = new Option("✎ Rename this note…", "__rename__");
+      nbSelect.appendChild(renameOpt);
+      nbSelect.appendChild(new Option("＋ New notebook…", "__new__"));
+      nbSelect.value = current;
+
+      const targetFor = (v) => v === "__project__" ? { type: "project" } : { type: "notebook", name: v };
+      const folderFor = (v) => (v === "__project__" ? (STATE.projectDir || "") : (STATE.notebooksDir || ""));
+      let target = targetFor(current);
+      nbSelect.dataset.tip = folderFor(current);
+
+      // Onboarding template seeded into a brand-new notebook.
+      const NEW_MD = "# TO-DO\n- [x] Create new pad file\n- [ ] Capture lyrics, ideas and to-dos…\n\n# LYRICS\n♪\n";
+      const initialNotebooks = new Set(STATE && STATE.notebooks ? STATE.notebooks : []);
+      const createdThisSession = new Set();  // notebooks made in this session
+      const renameOrigin = {};               // current name -> original on-disk name (for backend fs.rename)
+      let nbMode = null;                      // "rename" while the inline name field is open
+
+      // Rename lives inside the notebook dropdown; disable it for the project note.
+      function updateRenameOpt() { if (renameOpt) renameOpt.disabled = target.type === "project"; }
+
+      function selectValue(v) {
+        contents[current] = pad.value;   // stash edits before switching
+        current = v; target = targetFor(v);
+        pad.value = contents[current] || "";
+        nbSelect.value = current;
+        nbSelect.dataset.tip = folderFor(current);
+        if (!editing) renderPreview();
+        refreshCount(); refreshPath(); updateRenameOpt();
+      }
+
+      function uniqueName(base, ignore) {
+        base = (base || "").trim() || "Untitled";
+        if (base === ignore) return base;
+        if (!(base in contents)) return base;
+        let i = 2, nm;
+        while (((nm = base + " " + i) in contents) && nm !== ignore) i++;
+        return nm;
+      }
+
+      function showNbInput(prefill) {
+        nbSelect.hidden = true;
+        newNb.hidden = false; newNb.value = prefill || "";
+        newNb.focus(); newNb.select();
+      }
+      function hideNbInput() { newNb.hidden = true; nbSelect.hidden = false; }
+
+      function createNotebook() {
+        const nm = uniqueName("Untitled");
+        contents[current] = pad.value;                 // stash what we were on
+        contents[nm] = NEW_MD; createdThisSession.add(nm);
+        nbSelect.insertBefore(new Option(nm, nm), renameOpt);
+        current = nm; target = targetFor(nm);
+        nbSelect.value = nm; nbSelect.dataset.tip = folderFor(nm);
+        pad.value = NEW_MD;
+        if (!editing) renderPreview();
+        refreshCount(); refreshPath();
+      }
+
+      function renameCurrent(raw) {
+        if (target.type === "project") return;
+        const old = current;
+        const nm = uniqueName(raw, old);
+        if (nm === old) return;                        // blank / unchanged -> keep name
+        contents[nm] = contents[old]; delete contents[old];
+        for (const o of nbSelect.options) if (o.value === old) { o.value = nm; o.text = nm; }
+        if (createdThisSession.has(old)) { createdThisSession.delete(old); createdThisSession.add(nm); }
+        const origin = renameOrigin[old] || (initialNotebooks.has(old) ? old : null);
+        if (origin) renameOrigin[nm] = origin;
+        delete renameOrigin[old];
+        current = nm; target = targetFor(nm);
+        nbSelect.value = nm; nbSelect.dataset.tip = folderFor(nm);
+        refreshPath();
+      }
+
+      function enterRenameMode() { if (target.type !== "project") { nbMode = "rename"; showNbInput(current); } }
+      function commitNbInput() { if (!nbMode) return; renameCurrent(newNb.value); nbMode = null; hideNbInput(); }
+      function cancelNbInput() { nbMode = null; hideNbInput(); }
+
+      nbSelect.addEventListener("change", () => {
+        const v = nbSelect.value;
+        if (v === "__new__") { createNotebook(); enterRenameMode(); }
+        else if (v === "__rename__") { nbSelect.value = current; enterRenameMode(); }
+        else selectValue(v);
+      });
+      newNb.addEventListener("blur", () => { if (nbMode) commitNbInput(); });
+      newNb.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); commitNbInput(); pad.focus(); }
+        else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cancelNbInput(); }
+      });
+
+      // ---- tiny Markdown renderer (common subset + GFM task lists) ----
+      const SENT = String.fromCharCode(1);
+      function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+      function inline(s) {
+        s = esc(s);
+        const codes = [];
+        s = s.replace(/`([^`]+)`/g, function (_, c) { codes.push(c); return SENT + (codes.length - 1) + SENT; });
+        s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
+        s = s.replace(/(\*\*|__)(.+?)\1/g, "<strong>$2</strong>");
+        s = s.replace(/(\*|_)(.+?)\1/g, "<em>$2</em>");
+        s = s.replace(new RegExp(SENT + "(\\d+)" + SENT, "g"), function (_, i) { return "<code>" + codes[i] + "</code>"; });
+        return s;
+      }
+      function render(src) {
+        const lines = src.replace(/\r\n?/g, "\n").split("\n");
+        let html = "", para = [], listBuf = [], listType = null;
+        const flushPara = () => { if (para.length) { html += "<p>" + para.map(inline).join("<br>") + "</p>"; para = []; } };
+        const flushList = () => { if (listType) { html += "<" + listType + ">" + listBuf.join("") + "</" + listType + ">"; listBuf = []; listType = null; } };
+        let m;
+        for (let ln = 0; ln < lines.length; ln++) {
+          const line = lines[ln];
+          if (/^\s*$/.test(line)) { flushList(); flushPara(); continue; }
+          if (m = line.match(/^(#{1,3})\s+(.*)$/)) { flushList(); flushPara(); const l = m[1].length; html += "<h" + l + ">" + inline(m[2]) + "</h" + l + ">"; continue; }
+          if (/^\s*(---|\*\*\*|___)\s*$/.test(line)) { flushList(); flushPara(); html += "<hr>"; continue; }
+          if (m = line.match(/^\s*>\s?(.*)$/)) { flushList(); flushPara(); html += "<blockquote>" + inline(m[1]) + "</blockquote>"; continue; }
+          if (m = line.match(/^\s*[-*+]\s+\[([ xX]?)\]\s*(.*)$/)) {
+            flushPara(); if (listType && listType !== "ul") flushList(); listType = "ul";
+            const doneItem = m[1].toLowerCase() === "x";
+            listBuf.push('<li class="task' + (doneItem ? " done" : "") + '"><input type="checkbox" data-ln="' + ln + '"' + (doneItem ? " checked" : "") + '><span>' + inline(m[2]) + "</span></li>");
+            continue;
+          }
+          if (m = line.match(/^\s*[-*+]\s+(.*)$/)) { flushPara(); if (listType && listType !== "ul") flushList(); listType = "ul"; listBuf.push("<li>" + inline(m[1]) + "</li>"); continue; }
+          if (m = line.match(/^\s*\d+\.\s+(.*)$/)) { flushPara(); if (listType && listType !== "ol") flushList(); listType = "ol"; listBuf.push("<li>" + inline(m[1]) + "</li>"); continue; }
+          flushList(); para.push(line);
+        }
+        flushList(); flushPara();
+        return html;
+      }
+      function refreshCount() {
+        const words = (pad.value.trim().match(/\S+/g) || []).length;
+        count.textContent = words + (words === 1 ? " word" : " words");
+      }
+      function renderPreview() { preview.innerHTML = render(pad.value); }
+
+      // pencil = "switch to Edit", eye = "switch to Preview"
+      const ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 11.3 L10.4 2.9 L13 5.5 L4.6 14 L2 14 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 4.3 L11.6 6.9" stroke="currentColor" stroke-width="1.2"/></svg>';
+      const ICON_PREVIEW = '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 C3 4.5 13 4.5 15 8 C13 11.5 3 11.5 1 8 Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2.1" fill="currentColor"/></svg>';
+
+      let editing = false;
+      function setMode(edit) {
+        editing = edit;
+        if (edit) {
+          pad.style.display = "block"; preview.style.display = "none";
+          modeBtn.innerHTML = ICON_PREVIEW; modeBtn.dataset.tip = "View (⌘E)";
+          pad.focus(); pad.setSelectionRange(pad.value.length, pad.value.length);
+        } else {
+          renderPreview();
+          pad.style.display = "none"; preview.style.display = "block";
+          modeBtn.innerHTML = ICON_EDIT; modeBtn.dataset.tip = "Edit (⌘E)";
+        }
+        refreshCount();
+      }
+
+      pad.addEventListener("input", refreshCount);
+      modeBtn.addEventListener("click", () => setMode(!editing));
+
+      preview.addEventListener("change", (e) => {
+        const cb = e.target;
+        if (!cb.matches || !cb.matches('input[type="checkbox"][data-ln]')) return;
+        const ln = +cb.dataset.ln;
+        const a = pad.value.replace(/\r\n?/g, "\n").split("\n");
+        if (a[ln] != null) {
+          a[ln] = a[ln].replace(/\[([ xX]?)\]/, cb.checked ? "[x]" : "[ ]");
+          pad.value = a.join("\n"); renderPreview(); refreshCount();
+        }
+      });
+      // Enter edit mode only on a genuine tap — never after selecting text or
+      // dragging — so casual readers stay in View mode.
+      let downX = 0, downY = 0;
+      preview.addEventListener("mousedown", (e) => { downX = e.clientX; downY = e.clientY; });
+      preview.addEventListener("click", (e) => {
+        if (editing) return;
+        if (e.target.closest && e.target.closest("a, input")) return;   // links / checkboxes
+        const sel = window.getSelection && window.getSelection();
+        if (sel && !sel.isCollapsed && String(sel).trim()) return;      // text was selected
+        if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 4) return; // was a drag
+        setMode(true);
+      });
+
+      setMode(false); // render by default
+      updateRenameOpt();
+
+      let done = false;
+      function post(action) {
+        if (done) return;
+        if (nbMode) commitNbInput();     // finalize an in-progress rename first
+        done = true;
+        contents[current] = pad.value;   // stash current selection
+        const map = {};
+        for (const k in contents) {
+          if (k === "__project__") continue;
+          // drop notebooks created this session that were left empty or untouched
+          if (createdThisSession.has(k)) {
+            const t = (contents[k] || "").trim();
+            if (t === "" || t === NEW_MD.trim()) continue;
+          }
+          map[k] = contents[k];
+        }
+        const renames = [];
+        for (const nm in renameOrigin)
+          if (nm in map && renameOrigin[nm] !== nm) renames.push({ from: renameOrigin[nm], to: nm });
+        const payload = { action: action, target: target, map: map, renames: renames, editing: editing, caret: pad.selectionStart || 0 };
+        if ("__project__" in contents) payload.projectText = contents["__project__"];
+        const msg = { method: "close_and_send", params: [JSON.stringify(payload)] };
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
+          window.webkit.messageHandlers.live.postMessage(msg);
+        } else if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage(msg);
+        }
+      }
+
+      document.getElementById("save").addEventListener("click", () => post("save"));
+      document.getElementById("discard").addEventListener("click", () => post("cancel"));
+
+      // ---- Markdown help panel ----
+      const helpPanel = document.getElementById("help");
+      const closeHelp = () => { helpPanel.hidden = true; };
+      document.getElementById("helpBtn").addEventListener("click", () => { helpPanel.hidden = false; });
+      document.getElementById("helpClose").addEventListener("click", closeHelp);
+      helpPanel.addEventListener("click", (e) => { if (e.target === helpPanel) closeHelp(); });
+      // Show each snippet next to its live-rendered result.
+      const HELP_ROWS = [
+        "# Heading",
+        "- [ ] to-do\n- [x] done",
+        "- bullet item",
+        "1. numbered item",
+        "**bold** and *italic*",
+        "[link](https://…)",
+      ];
+      document.getElementById("cheatBody").innerHTML = HELP_ROWS.map(function (src) {
+        return '<tr><td class="raw"><code>' + esc(src).replace(/\n/g, "<br>") + "</code></td>"
+             + '<td class="md">' + render(src) + "</td></tr>";
+      }).join("");
+
+      // Rendered links are for reference only — never navigate the webview away.
+      document.addEventListener("click", (e) => {
+        const a = e.target.closest ? e.target.closest("a") : null;
+        if (a) e.preventDefault();
+      });
+
+      // ---- inline file-location display (never closes the pad) ----
+      const revealBtn = document.getElementById("reveal");
+      const pathbar = document.getElementById("pathbar");
+      const pathtext = document.getElementById("pathtext");
+      function sanitizeName(n) { return (n.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled"); }
+      function currentFilePath() {
+        if (target.type === "project") return STATE.projectDir ? STATE.projectDir + "/Lyrics.md" : "";
+        return STATE.notebooksDir ? STATE.notebooksDir + "/" + sanitizeName(current) + ".md" : "";
+      }
+      function refreshPath() { if (!pathbar.hidden) pathtext.textContent = currentFilePath() || "(location unavailable)"; }
+      revealBtn.addEventListener("click", () => {
+        pathbar.hidden = !pathbar.hidden;
+        const showing = !pathbar.hidden;
+        revealBtn.classList.toggle("on", showing);
+        revealBtn.dataset.tip = showing ? "Hide file location" : "Show file location";
+        refreshPath();
+      });
+      document.addEventListener("keydown", (e) => {
+        const mod = e.metaKey || e.ctrlKey;
+        const k = e.key.toLowerCase();
+        if (e.key === "Escape" && !helpPanel.hidden) { e.preventDefault(); closeHelp(); return; }
+        if ((mod && (k === "s" || k === "w")) || e.key === "Escape") { e.preventDefault(); post("save"); }
+        else if (mod && k === "e") { e.preventDefault(); setMode(!editing); }
+      });
+      window.addEventListener("beforeunload", () => post("save")); // save if closed another way
+    </script>
+  </body>
+</html>

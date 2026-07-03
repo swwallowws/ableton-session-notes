@@ -10,28 +10,17 @@ const SCOPES = ["AudioTrack", "MidiTrack", "ClipSlot", "Scene"] as const;
 
 // Seeded into a pad that has no content yet.
 const DEFAULT_MD =
-  "# TO-DO\n- [x] Create new pad file\n- [ ] Capture lyrics, ideas and to-dos…\n\n# LYRICS\n♪\n";
+  "# TO-DO\n- [x] Create a session note\n- [ ] Capture lyrics, ideas and to-dos…\n\n# LYRICS\n♪\n";
 
 export function activate(activation: ActivationContext) {
   const context = initialize(activation, "1.0.0");
 
-  // In dev, storageDirectory is undefined → fall back to a folder under $HOME.
-  // Migrate the old "lyrics-pad" fallback folder to the new name if present.
-  const fallbackBase = path.join(os.homedir(), ".ableton-extensions", "session-notes");
-  if (!context.environment.storageDirectory) {
-    try {
-      const oldBase = path.join(os.homedir(), ".ableton-extensions", "lyrics-pad");
-      if (fs.existsSync(oldBase) && !fs.existsSync(fallbackBase))
-        fs.renameSync(oldBase, fallbackBase);
-    } catch {
-      /* ignore — a fresh folder will be created below */
-    }
-  }
-  const baseDir = context.environment.storageDirectory || fallbackBase;
+  // Installed: Live provides storageDirectory. Dev: fall back under $HOME.
+  const baseDir =
+    context.environment.storageDirectory ||
+    path.join(os.homedir(), ".ableton-extensions", "session-notes");
   const notebooksDir = path.join(baseDir, "notebooks");
   const stateFile = path.join(baseDir, "state.json");
-  const legacyMd = path.join(baseDir, "lyrics.md");
-  const legacyTxt = path.join(baseDir, "lyrics.txt");
 
   // ---- filesystem helpers -------------------------------------------------
   const readFile = (p: string): string => {
@@ -45,24 +34,6 @@ export function activate(activation: ActivationContext) {
     name.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled";
   const notebookPath = (name: string) =>
     path.join(notebooksDir, sanitize(name) + ".md");
-
-  // Migration: (a) rename a previously-created "General" notebook to "Global";
-  // (b) move the old single global note into a "Global" notebook.
-  const ensureMigrated = () => {
-    try {
-      const general = notebookPath("General");
-      const global = notebookPath("Global");
-      if (fs.existsSync(general) && !fs.existsSync(global))
-        fs.renameSync(general, global);
-      if (readState().current === "General") writeState({ current: "Global" });
-    } catch {
-      /* ignore */
-    }
-    if (fs.existsSync(notebooksDir)) return;
-    fs.mkdirSync(notebooksDir, { recursive: true });
-    const legacy = readFile(legacyMd) || readFile(legacyTxt);
-    if (legacy.trim()) fs.writeFileSync(notebookPath("Global"), legacy, "utf8");
-  };
 
   const listNotebooks = (): string[] => {
     try {
@@ -149,17 +120,6 @@ export function activate(activation: ActivationContext) {
     return null;
   };
   const projectFile = (root: string) => path.join(root, "Session Notes.md");
-  // Per-project notes used to be "Lyrics.md" — rename in place if found.
-  const migrateProjectFile = (root: string) => {
-    try {
-      const legacy = path.join(root, "Lyrics.md");
-      const current = projectFile(root);
-      if (fs.existsSync(legacy) && !fs.existsSync(current))
-        fs.renameSync(legacy, current);
-    } catch {
-      /* ignore */
-    }
-  };
 
   // ---- command ------------------------------------------------------------
   type Payload = {
@@ -168,20 +128,14 @@ export function activate(activation: ActivationContext) {
     projectText?: string;
     map?: Record<string, string>;
     renames?: { from: string; to: string }[];
-    editing?: boolean;
-    caret?: number;
   };
 
-  // Build the pad's state from disk, or (for save-and-stay) from in-memory
-  // contents plus restore info for the reopened window.
-  const buildState = (
-    root: string | null,
-    restore: { editing: boolean; caret: number } | null,
-    override: { projectText?: string; map?: Record<string, string>; current?: string } | null,
-  ) => {
-    const notebookContents: Record<string, string> = override?.map
-      ? { ...override.map }
-      : Object.fromEntries(listNotebooks().map((n) => [n, readFile(notebookPath(n))]));
+  // Gather everything the webview needs: the project note (if any), all
+  // notebooks, and which one to open first.
+  const buildState = (root: string | null) => {
+    const notebookContents: Record<string, string> = Object.fromEntries(
+      listNotebooks().map((n) => [n, readFile(notebookPath(n))]),
+    );
 
     let projectName: string | null = null;
     let projectDir: string | null = null;
@@ -189,23 +143,19 @@ export function activate(activation: ActivationContext) {
     if (root) {
       projectName = path.basename(root);
       projectDir = root;
-      projectContent = override?.projectText ?? (readFile(projectFile(root)) || DEFAULT_MD);
+      projectContent = readFile(projectFile(root)) || DEFAULT_MD;
     }
 
     // Reopen whatever was open last (project note or a specific notebook),
     // falling back to the project note, then the first notebook.
     let current: string;
-    if (override?.current) {
-      current = override.current;
-    } else {
-      const saved = readState().current || "";
-      if (root && saved === "__project__") current = "__project__";
-      else if (saved && saved in notebookContents) current = saved;
-      else if (root) current = "__project__";
-      else {
-        current = Object.keys(notebookContents)[0] || "Global";
-        if (!(current in notebookContents)) notebookContents[current] = DEFAULT_MD;
-      }
+    const saved = readState().current || "";
+    if (root && saved === "__project__") current = "__project__";
+    else if (saved && saved in notebookContents) current = saved;
+    else if (root) current = "__project__";
+    else {
+      current = Object.keys(notebookContents)[0] || "Global";
+      if (!(current in notebookContents)) notebookContents[current] = DEFAULT_MD;
     }
 
     return {
@@ -216,7 +166,6 @@ export function activate(activation: ActivationContext) {
       notebooks: Object.keys(notebookContents).sort((a, b) => a.localeCompare(b)),
       notebookContents,
       current,
-      restore,
     };
   };
 
@@ -257,10 +206,8 @@ export function activate(activation: ActivationContext) {
         : null;
 
   context.commands.registerCommand("notes.open", async () => {
-    ensureMigrated();
     const root = detectProjectRoot();
-    if (root) migrateProjectFile(root);
-    const state = buildState(root, null, null);
+    const state = buildState(root);
     const html = interfaceHtml.replace("'__STATE__'", JSON.stringify(state));
     const url = `data:text/html,${encodeURIComponent(html)}`;
     const result = await context.ui.showModalDialog(url, 640, 560);
@@ -276,7 +223,9 @@ export function activate(activation: ActivationContext) {
     }
   });
 
+  // Live prefixes submenu items with the extension name ("Session Notes:"),
+  // so the action title is just the verb to avoid a doubled label.
   for (const scope of SCOPES) {
-    context.ui.registerContextMenuAction(scope, "Session Notes…", "notes.open");
+    context.ui.registerContextMenuAction(scope, "Open…", "notes.open");
   }
 }

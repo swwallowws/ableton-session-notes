@@ -6,13 +6,19 @@
     <title>Session Notes</title>
     <style>
       :root {
-        --bg: #2b2b2b;
-        --text: #cfcfcf;
-        --muted: #808080;
-        --line: #363636;
-        --field: #303030;
-        --field-hover: #383838;
-        --accent: #ff8b3d;
+        /* Palette aligned to Live 12's default dark theme (a subtle cool-neutral:
+           main surface ~#2e3137, dark control fields ~#1d1f23). The writing area
+           is a dark field, the bar matches Live's surface, and buttons sit lighter
+           above it. Amber accent and blue text-selection are Live's own. */
+        --bg: #1f2228;          /* writing area — dark control field */
+        --surface: #2e3137;     /* bottom bar — surface tone */
+        --field: #43464e;       /* buttons / notebook selector (raised) */
+        --field-hover: #4c4f57;
+        --text: #b6b7bd;        /* control foreground */
+        --muted: #74767e;       /* disabled text */
+        --line: #16181c;        /* dark frame */
+        --accent: #ffad56;      /* accent (default / enabled) */
+        --select: #b0ddeb;      /* text selection */
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
@@ -33,7 +39,8 @@
         font: 13px/1.7 ui-monospace, "SF Mono", Menlo, monospace;
       }
       textarea::placeholder { color: var(--muted); }
-      textarea::selection { background: rgba(255, 139, 61, 0.28); }
+      textarea::selection { background: rgba(176, 221, 235, 0.30); color: var(--bg); }
+      .md ::selection { background: rgba(176, 221, 235, 0.30); color: var(--bg); }
 
       .md { padding: 14px 16px; font-size: 13px; line-height: 1.7; cursor: text; }
       #preview { min-height: 100%; }   /* fill the view so the whole empty note is clickable */
@@ -47,10 +54,21 @@
       .md ul, .md ol { margin: 0 0 10px; padding-left: 20px; }
       .md li { margin: 2px 0; }
       .md li.task { list-style: none; margin-left: -18px; display: flex; align-items: baseline; gap: 7px; }
-      .md li.task input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+      /* square checkbox, matching Ableton's boxy controls */
+      .md li.task input {
+        appearance: none; -webkit-appearance: none; margin: 0; cursor: pointer;
+        flex: 0 0 auto; width: 13px; height: 13px; position: relative; top: 1px;
+        background: var(--field); border: 1px solid var(--muted); border-radius: 2px;
+      }
+      .md li.task input:checked { background: var(--accent); border-color: var(--accent); }
+      .md li.task input:checked::after {
+        content: ""; position: absolute; left: 3.5px; top: 0.5px;
+        width: 3px; height: 7px; border: solid var(--bg);
+        border-width: 0 1.6px 1.6px 0; transform: rotate(45deg);
+      }
       .md li.task.done { color: var(--muted); text-decoration: line-through; }
-      .md blockquote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 2px solid #4a4a4a; color: var(--muted); }
-      .md code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #333; padding: 1px 4px; border-radius: 2px; }
+      .md blockquote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 2px solid var(--field); color: var(--muted); }
+      .md code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #2a2d33; padding: 1px 4px; border-radius: 2px; }
       .md a { color: var(--accent); text-decoration: none; }
       .md hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 
@@ -75,7 +93,7 @@
       .help-cheat td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: top; width: 50%; }
       .help-cheat td.raw code {
         font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
-        background: #333; padding: 1px 5px; border-radius: 2px; color: var(--text);
+        background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
         display: inline-block; line-height: 1.7;
       }
       .help-cheat td.md { line-height: 1.4; }
@@ -93,27 +111,32 @@
         color: var(--muted); cursor: text;
       }
       .pathbar[hidden] { display: none; }
-      .pathbar .p { flex: 1 1 auto; overflow-x: auto; white-space: nowrap; user-select: text; }
+      .pathbar .p { flex: 1 1 auto; overflow-x: auto; white-space: nowrap; user-select: text; scrollbar-width: none; }
+      .pathbar .p::-webkit-scrollbar { display: none; }   /* hide scrollbar, keep scroll */
       .bar {
         display: flex; align-items: center; justify-content: space-between;
         height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
-        flex: 0 0 auto; user-select: none;
+        background: var(--surface); flex: 0 0 auto; user-select: none;
       }
       .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
       .tools { display: flex; align-items: center; gap: 2px; }
+      /* Flat, boxy controls with a subtle frame and clear hover — Live's style. */
       .nb {
         font: inherit; color: var(--text); background: var(--field);
-        border: 1px solid var(--line); border-radius: 2px; padding: 3px 6px; max-width: 170px;
+        border: 1px solid var(--line); border-radius: 3px; height: 24px;
+        padding: 0 6px; max-width: 170px;
       }
       .nb:hover { background: var(--field-hover); }
       .count { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; margin-right: 4px; }
       .actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
       button {
-        font: inherit; padding: 4px 12px; border: 1px solid var(--line);
-        border-radius: 2px; background: var(--field); color: var(--text); cursor: pointer;
+        font: inherit; height: 24px; padding: 0 12px; border: 1px solid transparent;
+        border-radius: 3px; background: var(--field); color: var(--text); cursor: pointer;
       }
       button:hover { background: var(--field-hover); }
-      button.primary { border-color: #4a4a4a; }
+      button:active { background: var(--field); }
+      /* Default action gets a thin accent frame, the way Live marks a selected control. */
+      button.primary { border-color: var(--accent); }
       button.ghost { border-color: transparent; background: transparent; color: var(--muted); }
       button.ghost:hover { color: var(--text); background: var(--field); }
       button.icon.on { color: var(--accent); background: var(--field); }
@@ -123,7 +146,7 @@
       [data-tip] { position: relative; }
       [data-tip]:hover::after {
         content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%;
-        transform: translateX(-50%); white-space: nowrap; background: #1c1c1c; color: var(--text);
+        transform: translateX(-50%); white-space: nowrap; background: #14161a; color: var(--text);
         border: 1px solid var(--line); padding: 3px 7px; border-radius: 3px; font-size: 10px;
         pointer-events: none; z-index: 10;
       }
@@ -204,8 +227,6 @@
       let target = targetFor(current);
       nbSelect.dataset.tip = folderFor(current);
 
-      // Onboarding template seeded into a brand-new notebook.
-      const NEW_MD = "# TO-DO\n- [x] Create new pad file\n- [ ] Capture lyrics, ideas and to-dos…\n\n# LYRICS\n♪\n";
       const initialNotebooks = new Set(STATE && STATE.notebooks ? STATE.notebooks : []);
       const createdThisSession = new Set();  // notebooks made in this session
       const renameOrigin = {};               // current name -> original on-disk name (for backend fs.rename)
@@ -241,13 +262,15 @@
       function hideNbInput() { newNb.hidden = true; nbSelect.hidden = false; }
 
       function createNotebook() {
+        // New notebooks start empty (dimmed "start writing" placeholder shows).
+        // Only the first file (Global) is seeded with the starter template.
         const nm = uniqueName("Untitled");
         contents[current] = pad.value;                 // stash what we were on
-        contents[nm] = NEW_MD; createdThisSession.add(nm);
+        contents[nm] = ""; createdThisSession.add(nm);
         nbSelect.insertBefore(new Option(nm, nm), renameOpt);
         current = nm; target = targetFor(nm);
         nbSelect.value = nm; nbSelect.dataset.tip = folderFor(nm);
-        pad.value = NEW_MD;
+        pad.value = "";
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
       }
@@ -328,7 +351,7 @@
       }
       function renderPreview() { preview.innerHTML = render(pad.value); }
 
-      // pencil = "switch to Edit", eye = "switch to Preview"
+      // pencil icon = "switch to Edit"; eye icon = "switch to View"
       const ICON_EDIT = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 11.3 L10.4 2.9 L13 5.5 L4.6 14 L2 14 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 4.3 L11.6 6.9" stroke="currentColor" stroke-width="1.2"/></svg>';
       const ICON_PREVIEW = '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 C3 4.5 13 4.5 15 8 C13 11.5 3 11.5 1 8 Z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2.1" fill="currentColor"/></svg>';
 
@@ -385,17 +408,14 @@
         const map = {};
         for (const k in contents) {
           if (k === "__project__") continue;
-          // drop notebooks created this session that were left empty or untouched
-          if (createdThisSession.has(k)) {
-            const t = (contents[k] || "").trim();
-            if (t === "" || t === NEW_MD.trim()) continue;
-          }
+          // drop notebooks created this session but left empty
+          if (createdThisSession.has(k) && (contents[k] || "").trim() === "") continue;
           map[k] = contents[k];
         }
         const renames = [];
         for (const nm in renameOrigin)
           if (nm in map && renameOrigin[nm] !== nm) renames.push({ from: renameOrigin[nm], to: nm });
-        const payload = { action: action, target: target, map: map, renames: renames, editing: editing, caret: pad.selectionStart || 0 };
+        const payload = { action: action, target: target, map: map, renames: renames };
         if ("__project__" in contents) payload.projectText = contents["__project__"];
         const msg = { method: "close_and_send", params: [JSON.stringify(payload)] };
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
@@ -455,8 +475,14 @@
         const mod = e.metaKey || e.ctrlKey;
         const k = e.key.toLowerCase();
         if (e.key === "Escape" && !helpPanel.hidden) { e.preventDefault(); closeHelp(); return; }
-        if ((mod && (k === "s" || k === "w")) || e.key === "Escape") { e.preventDefault(); post("save"); }
-        else if (mod && k === "e") { e.preventDefault(); setMode(!editing); }
+        if (mod && (k === "s" || k === "w")) { e.preventDefault(); post("save"); return; }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          if (editing) setMode(false);   // edit → back to View
+          else post("save");             // View → save & close
+          return;
+        }
+        if (mod && k === "e") { e.preventDefault(); setMode(!editing); }
       });
       window.addEventListener("beforeunload", () => post("save")); // save if closed another way
     </script>

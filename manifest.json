@@ -1,6 +1,6 @@
 {
-  "name": "Lyrics Pad",
-  "author": "Bengisu",
+  "name": "Session Notes",
+  "author": "Bengisu @somaluden",
   "entry": "dist/extension.js",
   "version": "0.1.0",
   "minimumApiVersion": "1.0.0"

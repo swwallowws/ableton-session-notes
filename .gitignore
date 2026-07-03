@@ -1,2 +1,4 @@
 node_modules/
 dist/
+*.ablx
+.DS_Store

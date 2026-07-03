@@ -15,9 +15,19 @@ const DEFAULT_MD =
 export function activate(activation: ActivationContext) {
   const context = initialize(activation, "1.0.0");
 
-  const baseDir =
-    context.environment.storageDirectory ||
-    path.join(os.homedir(), ".ableton-extensions", "lyrics-pad");
+  // In dev, storageDirectory is undefined → fall back to a folder under $HOME.
+  // Migrate the old "lyrics-pad" fallback folder to the new name if present.
+  const fallbackBase = path.join(os.homedir(), ".ableton-extensions", "session-notes");
+  if (!context.environment.storageDirectory) {
+    try {
+      const oldBase = path.join(os.homedir(), ".ableton-extensions", "lyrics-pad");
+      if (fs.existsSync(oldBase) && !fs.existsSync(fallbackBase))
+        fs.renameSync(oldBase, fallbackBase);
+    } catch {
+      /* ignore — a fresh folder will be created below */
+    }
+  }
+  const baseDir = context.environment.storageDirectory || fallbackBase;
   const notebooksDir = path.join(baseDir, "notebooks");
   const stateFile = path.join(baseDir, "state.json");
   const legacyMd = path.join(baseDir, "lyrics.md");
@@ -138,7 +148,18 @@ export function activate(activation: ActivationContext) {
     }
     return null;
   };
-  const projectFile = (root: string) => path.join(root, "Lyrics.md");
+  const projectFile = (root: string) => path.join(root, "Session Notes.md");
+  // Per-project notes used to be "Lyrics.md" — rename in place if found.
+  const migrateProjectFile = (root: string) => {
+    try {
+      const legacy = path.join(root, "Lyrics.md");
+      const current = projectFile(root);
+      if (fs.existsSync(legacy) && !fs.existsSync(current))
+        fs.renameSync(legacy, current);
+    } catch {
+      /* ignore */
+    }
+  };
 
   // ---- command ------------------------------------------------------------
   type Payload = {
@@ -235,9 +256,10 @@ export function activate(activation: ActivationContext) {
         ? payload.target.name
         : null;
 
-  context.commands.registerCommand("lyrics.open", async () => {
+  context.commands.registerCommand("notes.open", async () => {
     ensureMigrated();
     const root = detectProjectRoot();
+    if (root) migrateProjectFile(root);
     const state = buildState(root, null, null);
     const html = interfaceHtml.replace("'__STATE__'", JSON.stringify(state));
     const url = `data:text/html,${encodeURIComponent(html)}`;
@@ -255,6 +277,6 @@ export function activate(activation: ActivationContext) {
   });
 
   for (const scope of SCOPES) {
-    context.ui.registerContextMenuAction(scope, "Lyrics…", "lyrics.open");
+    context.ui.registerContextMenuAction(scope, "Session Notes…", "notes.open");
   }
 }

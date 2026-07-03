@@ -1,11 +1,12 @@
 {
-  "name": "ableton-lyrics-pad",
+  "name": "ableton-session-notes",
   "type": "module",
   "main": "dist/extension.js",
   "scripts": {
     "build": "tsc --noEmit && tsx build.ts",
+    "build:prod": "tsc --noEmit && tsx build.ts --production",
     "start": "tsx build.ts && extensions-cli run",
-    "package": "tsx build.ts && extensions-cli package"
+    "package": "tsc --noEmit && tsx build.ts --production && extensions-cli package"
   },
   "dependencies": {
     "@ableton-extensions/sdk": "file:./vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz"

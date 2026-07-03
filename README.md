@@ -1,5 +1,7 @@
 # Session Notes
 
+<img width="640" height="588" alt="session notes" src="https://github.com/user-attachments/assets/1068d4ae-3de4-4fac-97a9-e15717459854" />
+
 A minimal Markdown notepad for **Ableton Live 12**, built on the [Live Extensions SDK](https://ableton.com). Jot lyrics, ideas, and to-dos without leaving Live — with clean, native-feeling typography and a render-by-default Markdown view.
 
 > Requires Ableton Live 12 with the Extensions feature (SDK `1.0.0-beta.0`).

@@ -104,6 +104,23 @@
       .help-cheat td.md li.task { margin-left: -14px; }
       .help-cheat td.md input { pointer-events: none; }
       .help-cheat td.md a { color: var(--accent); text-decoration: none; pointer-events: none; }
+      .migrate {
+        flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+        gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line);
+        background: var(--surface); font-size: 11px; line-height: 1.4; color: var(--text);
+      }
+      .migrate[hidden] { display: none; }
+      .migrate .mtext { min-width: 0; }
+      .migrate .mact { display: flex; gap: 6px; flex: 0 0 auto; }
+      .migrate button { height: 23px; padding: 0 11px; font-size: 11px; }
+      /* Passive info line — shown only while the Set is unsaved. */
+      .hint {
+        flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+        padding: 7px 12px; border-top: 1px solid var(--line);
+        background: var(--surface); font-size: 11px; line-height: 1.4; color: var(--muted);
+      }
+      .hint[hidden] { display: none; }
+      .hint svg { flex: 0 0 auto; }
       .pathbar {
         flex: 0 0 auto; display: flex; align-items: center;
         padding: 5px 12px; border-top: 1px solid var(--line);
@@ -113,6 +130,14 @@
       .pathbar[hidden] { display: none; }
       .pathbar .p { flex: 1 1 auto; overflow-x: auto; white-space: nowrap; user-select: text; scrollbar-width: none; }
       .pathbar .p::-webkit-scrollbar { display: none; }   /* hide scrollbar, keep scroll */
+      .pathbar .pathcopy {
+        flex: 0 0 auto; margin-left: 8px; width: 22px; height: 18px; padding: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        color: var(--muted); background: transparent; border: 0; border-radius: 3px; cursor: pointer;
+      }
+      .pathbar .pathcopy:hover { color: var(--text); background: var(--field); }
+      .pathbar .pathcopy.ok { color: var(--accent); }
+      .pathbar .pathcopy svg { display: block; }
       .bar {
         display: flex; align-items: center; justify-content: space-between;
         height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
@@ -160,15 +185,37 @@
       <div class="md" id="preview"></div>
       <textarea id="pad" placeholder="Capture lyrics, ideas and to-dos…" spellcheck="true"></textarea>
     </div>
-    <div class="pathbar" id="pathbar" hidden><span class="p" id="pathtext"></span></div>
+    <div class="migrate" id="migrate" hidden>
+      <span class="mtext" id="mtext"></span>
+      <span class="mact">
+        <button id="mbring" class="primary">Bring notes</button>
+        <button id="mno" class="ghost">Not now</button>
+      </span>
+    </div>
+    <div class="migrate" id="confirm" hidden>
+      <span class="mtext" id="ctext"></span>
+      <span class="mact">
+        <button id="cyes" class="primary">Delete</button>
+        <button id="cno" class="ghost">Cancel</button>
+      </span>
+    </div>
+    <div class="hint" id="hint" hidden>
+      <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
+      <span>Save your Set to attach notes.</span>
+    </div>
+    <div class="pathbar" id="pathbar" hidden>
+      <span class="p" id="pathtext"></span>
+      <button class="pathcopy tip-right" id="copypath" data-tip="Copy path" aria-label="Copy path"></button>
+    </div>
     <div class="bar">
       <div class="left">
         <select class="nb tip-left" id="notebook"></select>
-        <input class="nb" id="newnb" hidden placeholder="name this notebook" />
+        <input class="nb" id="newnb" hidden placeholder="name this note" />
         <span class="tools">
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
           <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
           <button id="helpBtn" class="icon ghost tip-left" data-tip="Markdown help" aria-label="Markdown help">?</button>
+          <button id="sizeToggle" class="icon ghost tip-left" data-tip="Resize" aria-label="Resize pad"></button>
         </span>
       </div>
       <div class="actions">
@@ -204,53 +251,77 @@
       const newNb = document.getElementById("newnb");
       let renameOpt = null;   // the "Rename…" entry inside the dropdown
 
-      // contents keyed by dropdown value ("__project__" for the project file, or
-      // a notebook name). One unified picker for project + all notebooks.
+      // Every note is keyed "p:<name>" (session/project) or "g:<name>" (global),
+      // so project and global names never collide. One unified picker for both.
+      const hasProject = !!(STATE && STATE.hasProject);
       const contents = {};
-      const hasProject = !!(STATE && STATE.projectName != null);
-      if (hasProject) contents["__project__"] = STATE.projectContent || "";
-      if (STATE && STATE.notebookContents) for (const k in STATE.notebookContents) contents[k] = STATE.notebookContents[k];
+      if (STATE && STATE.projectNotes) for (const k in STATE.projectNotes) contents["p:" + k] = STATE.projectNotes[k];
+      if (STATE && STATE.globalNotes) for (const k in STATE.globalNotes) contents["g:" + k] = STATE.globalNotes[k];
 
-      let current = (STATE && STATE.current) || "General";
-      if (!(current in contents)) contents[current] = "";
+      let current = (STATE && STATE.current) || "";
+      if (!(current in contents)) { current = Object.keys(contents)[0] || "g:General"; contents[current] = contents[current] || ""; }
       pad.value = contents[current] || "";
 
-      if (hasProject) nbSelect.appendChild(new Option("📁 " + STATE.projectName, "__project__"));
-      for (const name of (STATE && STATE.notebooks ? STATE.notebooks : [])) nbSelect.appendChild(new Option(name, name));
-      renameOpt = new Option("✎ Rename this note…", "__rename__");
-      nbSelect.appendChild(renameOpt);
-      nbSelect.appendChild(new Option("＋ New notebook…", "__new__"));
-      nbSelect.value = current;
+      const scopeOf = (id) => id.slice(0, 1);
+      const nameOf = (id) => id.slice(2);
+      const namesIn = (scope) => Object.keys(contents).filter((k) => scopeOf(k) === scope).map(nameOf).sort((a, b) => a.localeCompare(b));
+      const folderFor = (id) => (scopeOf(id) === "p" ? (STATE.projectNotesDir || "") : (STATE.notebooksDir || ""));
 
-      const targetFor = (v) => v === "__project__" ? { type: "project" } : { type: "notebook", name: v };
-      const folderFor = (v) => (v === "__project__" ? (STATE.projectDir || "") : (STATE.notebooksDir || ""));
-      let target = targetFor(current);
-      nbSelect.dataset.tip = folderFor(current);
+      const initialIds = new Set(Object.keys(contents));  // notes present on disk at load
+      const createdThisSession = new Set();               // notes made in this session
+      const renameOrigin = {};                            // newId -> original on-disk name
+      const projectDeletes = new Set(), globalDeletes = new Set(); // on-disk names to remove
+      let nbMode = null;                                  // "rename" while the name field is open
 
-      const initialNotebooks = new Set(STATE && STATE.notebooks ? STATE.notebooks : []);
-      const createdThisSession = new Set();  // notebooks made in this session
-      const renameOrigin = {};               // current name -> original on-disk name (for backend fs.rename)
-      let nbMode = null;                      // "rename" while the inline name field is open
+      // Rebuild the dropdown from `contents`: a project group, a Global Notes
+      // group, then the New / Rename / Delete actions.
+      function rebuildSelect() {
+        nbSelect.innerHTML = "";
+        const addGroup = (label, ids) => {
+          if (!ids.length) return;
+          const og = document.createElement("optgroup");
+          og.label = label;
+          ids.forEach((id) => og.appendChild(new Option(nameOf(id), id)));
+          nbSelect.appendChild(og);
+        };
+        // Ableton names project folders "<Set> Project"; drop the redundant suffix.
+        const projLabel = (STATE.projectName || "").replace(/ Project$/, "");
+        if (hasProject) addGroup("Project · " + projLabel, namesIn("p").map((n) => "p:" + n));
+        addGroup("Global Notes", namesIn("g").map((n) => "g:" + n));
+        // A disabled option draws a separator line between the notes and the
+        // actions. Actions use all-emoji icons (same cell width) so they align.
+        // A disabled option draws a separator line between the notes and the
+        // actions. No leading glyphs — a native <select> can't align mismatched
+        // glyph widths, so plain text is the only reliably-aligned option.
+        const sep = new Option("──────────", "__sep__");
+        sep.disabled = true;
+        nbSelect.appendChild(sep);
+        if (hasProject) nbSelect.appendChild(new Option("New session note…", "__new__")); // project note
+        nbSelect.appendChild(new Option("New global note…", "__newnb__")); // global note
+        renameOpt = new Option("Rename note…", "__rename__");
+        nbSelect.appendChild(renameOpt);
+        nbSelect.appendChild(new Option("Delete note…", "__delete__"));
+        nbSelect.value = current;
+        nbSelect.dataset.tip = folderFor(current);
+      }
+      rebuildSelect();
 
-      // Rename lives inside the notebook dropdown; disable it for the project note.
-      function updateRenameOpt() { if (renameOpt) renameOpt.disabled = target.type === "project"; }
-
-      function selectValue(v) {
+      function selectValue(id) {
         contents[current] = pad.value;   // stash edits before switching
-        current = v; target = targetFor(v);
+        current = id;
         pad.value = contents[current] || "";
         nbSelect.value = current;
         nbSelect.dataset.tip = folderFor(current);
         if (!editing) renderPreview();
-        refreshCount(); refreshPath(); updateRenameOpt();
+        refreshCount(); refreshPath();
       }
 
-      function uniqueName(base, ignore) {
+      function uniqueName(base, scope, ignore) {
         base = (base || "").trim() || "Untitled";
-        if (base === ignore) return base;
-        if (!(base in contents)) return base;
+        const taken = (nm) => (scope + ":" + nm) in contents;
+        if (base === ignore || !taken(base)) return base;
         let i = 2, nm;
-        while (((nm = base + " " + i) in contents) && nm !== ignore) i++;
+        while (taken((nm = base + " " + i)) && nm !== ignore) i++;
         return nm;
       }
 
@@ -261,44 +332,66 @@
       }
       function hideNbInput() { newNb.hidden = true; nbSelect.hidden = false; }
 
-      function createNotebook() {
-        // New notebooks start empty (dimmed "start writing" placeholder shows).
-        // Only the first file (Global) is seeded with the starter template.
-        const nm = uniqueName("Untitled");
+      // New notes go into the project when one is open, otherwise into globals.
+      function createNote(scope) {
+        scope = scope || (hasProject ? "p" : "g");
+        const nm = uniqueName("Untitled", scope);
+        const id = scope + ":" + nm;
         contents[current] = pad.value;                 // stash what we were on
-        contents[nm] = ""; createdThisSession.add(nm);
-        nbSelect.insertBefore(new Option(nm, nm), renameOpt);
-        current = nm; target = targetFor(nm);
-        nbSelect.value = nm; nbSelect.dataset.tip = folderFor(nm);
+        contents[id] = ""; createdThisSession.add(id);
+        current = id;
         pad.value = "";
+        rebuildSelect();
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
       }
 
       function renameCurrent(raw) {
-        if (target.type === "project") return;
-        const old = current;
-        const nm = uniqueName(raw, old);
-        if (nm === old) return;                        // blank / unchanged -> keep name
-        contents[nm] = contents[old]; delete contents[old];
-        for (const o of nbSelect.options) if (o.value === old) { o.value = nm; o.text = nm; }
-        if (createdThisSession.has(old)) { createdThisSession.delete(old); createdThisSession.add(nm); }
-        const origin = renameOrigin[old] || (initialNotebooks.has(old) ? old : null);
-        if (origin) renameOrigin[nm] = origin;
-        delete renameOrigin[old];
-        current = nm; target = targetFor(nm);
-        nbSelect.value = nm; nbSelect.dataset.tip = folderFor(nm);
+        const scope = scopeOf(current), oldName = nameOf(current);
+        const nm = uniqueName(raw, scope, oldName);
+        if (nm === oldName) return;                    // blank / unchanged -> keep name
+        const oldId = current, newId = scope + ":" + nm;
+        contents[newId] = contents[oldId]; delete contents[oldId];
+        if (createdThisSession.has(oldId)) { createdThisSession.delete(oldId); createdThisSession.add(newId); }
+        const origin = renameOrigin[oldId] || (initialIds.has(oldId) ? oldName : null);
+        if (origin) renameOrigin[newId] = origin;
+        delete renameOrigin[oldId];
+        current = newId;
+        rebuildSelect();
         refreshPath();
       }
 
-      function enterRenameMode() { if (target.type !== "project") { nbMode = "rename"; showNbInput(current); } }
+      function enterRenameMode() { nbMode = "rename"; showNbInput(nameOf(current)); }
       function commitNbInput() { if (!nbMode) return; renameCurrent(newNb.value); nbMode = null; hideNbInput(); }
       function cancelNbInput() { nbMode = null; hideNbInput(); }
 
+      // Delete: drop the note, record its on-disk file for removal, then land on
+      // a sibling (or a fresh empty note if this was the last one).
+      function deleteCurrent() {
+        const id = current, scope = scopeOf(id), name = nameOf(id);
+        const diskName = renameOrigin[id] || (initialIds.has(id) ? name : null);
+        if (diskName) (scope === "p" ? projectDeletes : globalDeletes).add(diskName);
+        delete contents[id]; createdThisSession.delete(id); delete renameOrigin[id];
+        const rest = Object.keys(contents);
+        let next = rest.filter((k) => scopeOf(k) === scope).sort((a, b) => a.localeCompare(b))[0]
+                || rest.sort((a, b) => a.localeCompare(b))[0];
+        if (!next) {                                   // deleted the last note — start fresh
+          next = (hasProject ? "p:" : "g:") + "Untitled";
+          contents[next] = ""; createdThisSession.add(next);
+        }
+        current = next;
+        pad.value = contents[current] || "";
+        rebuildSelect();
+        if (!editing) renderPreview();
+        refreshCount(); refreshPath();
+      }
+
       nbSelect.addEventListener("change", () => {
         const v = nbSelect.value;
-        if (v === "__new__") { createNotebook(); enterRenameMode(); }
+        if (v === "__new__") { createNote("p"); enterRenameMode(); }
+        else if (v === "__newnb__") { createNote("g"); enterRenameMode(); }
         else if (v === "__rename__") { nbSelect.value = current; enterRenameMode(); }
+        else if (v === "__delete__") { nbSelect.value = current; askDelete(); }
         else selectValue(v);
       });
       newNb.addEventListener("blur", () => { if (nbMode) commitNbInput(); });
@@ -397,26 +490,107 @@
       });
 
       setMode(false); // render by default
-      updateRenameOpt();
+
+      // ---- size toggle. Two presets (m = default, s = compact). The SDK dialog
+      // can't resize once open, so the toggle closes the pad and the host reopens
+      // it at the other size. The icon shows which way it'll go. ----
+      const ICON_GROW = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2 H14 V6.5 M14 2 L9.3 6.7 M6.5 14 H2 V9.5 M2 14 L6.7 9.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const ICON_SHRINK = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 3 L8.8 7.2 M8.8 3.2 V7.2 H12.8 M3 13 L7.2 8.8 M7.2 12.8 V8.8 H3.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const sizeToggle = document.getElementById("sizeToggle");
+      const curSize = (STATE && STATE.size) || "m";
+      const bigger = curSize !== "m";   // if compact, next tap grows; else shrinks
+      sizeToggle.innerHTML = bigger ? ICON_GROW : ICON_SHRINK;
+      sizeToggle.dataset.tip = bigger ? "Larger" : "Smaller";
+      sizeToggle.addEventListener("click", () => post("resize", bigger ? "m" : "s"));
+
+      // ---- "bring notes from another project" offer (after a Save As) ----
+      let dismissedMigration = false;
+      const migrate = document.getElementById("migrate");
+      if (STATE && STATE.migration) {
+        const n = STATE.migration.count;
+        document.getElementById("mtext").textContent =
+          "New project — bring your " + n + (n === 1 ? " note" : " notes") +
+          " from “" + STATE.migration.fromName + "” over?";
+        migrate.hidden = false;
+      }
+      document.getElementById("mbring").addEventListener("click", () => post("bring"));
+      document.getElementById("mno").addEventListener("click", () => { dismissedMigration = true; migrate.hidden = true; });
+
+      // ---- unsaved-Set hint ----
+      // Until a Set is saved it lives in Ableton's transient "Untitled Project"
+      // folder (or none is detected), so notes aren't yet tied to a project.
+      // Surface that quietly; it clears itself once the Set is saved. Don't stack
+      // it under the bring-notes offer.
+      const pname = (STATE && STATE.projectName) || "";
+      const unsaved = !hasProject || pname === "Untitled Project" || / Temp Project$/.test(pname);
+      if (unsaved && !(STATE && STATE.migration))
+        document.getElementById("hint").hidden = false;
+
+      // ---- delete confirm ----
+      const confirmBar = document.getElementById("confirm");
+      const ctext = document.getElementById("ctext");
+      function askDelete() {
+        ctext.textContent = "Delete “" + nameOf(current) + "”? This can’t be undone.";
+        confirmBar.hidden = false;
+      }
+      document.getElementById("cyes").addEventListener("click", () => { confirmBar.hidden = true; deleteCurrent(); });
+      document.getElementById("cno").addEventListener("click", () => { confirmBar.hidden = true; });
+
+      // ---- copy path ----
+      function copyFallback(t) {
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+          document.body.appendChild(ta); ta.focus(); ta.select();
+          const ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          return ok;
+        } catch (e) { return false; }
+      }
+      const ICON_COPY = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M11 5.5 V3.4 A1.4 1.4 0 0 0 9.6 2 H3.4 A1.4 1.4 0 0 0 2 3.4 V9.6 A1.4 1.4 0 0 0 3.4 11 H5.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
+      const ICON_CHECK = '<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 L6.5 12 L13 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const copyBtn = document.getElementById("copypath");
+      copyBtn.innerHTML = ICON_COPY;
+      copyBtn.addEventListener("click", () => {
+        const p = currentFilePath();
+        if (!p) return;
+        const flash = () => {
+          copyBtn.innerHTML = ICON_CHECK; copyBtn.classList.add("ok"); copyBtn.dataset.tip = "Copied";
+          setTimeout(() => { copyBtn.innerHTML = ICON_COPY; copyBtn.classList.remove("ok"); copyBtn.dataset.tip = "Copy path"; }, 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(p).then(flash, () => { if (copyFallback(p)) flash(); });
+        } else if (copyFallback(p)) flash();
+      });
 
       let done = false;
-      function post(action) {
+      function post(action, size) {
         if (done) return;
         if (nbMode) commitNbInput();     // finalize an in-progress rename first
         done = true;
         contents[current] = pad.value;   // stash current selection
-        const map = {};
-        for (const k in contents) {
-          if (k === "__project__") continue;
-          // drop notebooks created this session but left empty
-          if (createdThisSession.has(k) && (contents[k] || "").trim() === "") continue;
-          map[k] = contents[k];
+        const projectMap = {}, globalMap = {};
+        for (const id in contents) {
+          // drop notes created this session but left empty
+          if (createdThisSession.has(id) && (contents[id] || "").trim() === "") continue;
+          if (scopeOf(id) === "p") projectMap[nameOf(id)] = contents[id];
+          else globalMap[nameOf(id)] = contents[id];
         }
-        const renames = [];
-        for (const nm in renameOrigin)
-          if (nm in map && renameOrigin[nm] !== nm) renames.push({ from: renameOrigin[nm], to: nm });
-        const payload = { action: action, target: target, map: map, renames: renames };
-        if ("__project__" in contents) payload.projectText = contents["__project__"];
+        const projectRenames = [], globalRenames = [];
+        for (const newId in renameOrigin) {
+          const scope = scopeOf(newId), nm = nameOf(newId), from = renameOrigin[newId];
+          const inMap = scope === "p" ? (nm in projectMap) : (nm in globalMap);
+          if (inMap && from !== nm) (scope === "p" ? projectRenames : globalRenames).push({ from: from, to: nm });
+        }
+        // Don't delete a name we're also writing (a note recreated with that name).
+        const dels = (set, map) => [...set].filter((nm) => !(nm in map));
+        const payload = {
+          action: action, current: current, size: size || (STATE && STATE.size) || "m",
+          dismissMigration: dismissedMigration,
+          projectMap: projectMap, globalMap: globalMap,
+          projectRenames: projectRenames, globalRenames: globalRenames,
+          projectDeletes: dels(projectDeletes, projectMap), globalDeletes: dels(globalDeletes, globalMap),
+        };
         const msg = { method: "close_and_send", params: [JSON.stringify(payload)] };
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.live) {
           window.webkit.messageHandlers.live.postMessage(msg);
@@ -460,8 +634,8 @@
       const pathtext = document.getElementById("pathtext");
       function sanitizeName(n) { return (n.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled"); }
       function currentFilePath() {
-        if (target.type === "project") return STATE.projectDir ? STATE.projectDir + "/Lyrics.md" : "";
-        return STATE.notebooksDir ? STATE.notebooksDir + "/" + sanitizeName(current) + ".md" : "";
+        const dir = folderFor(current);
+        return dir ? dir + "/" + sanitizeName(nameOf(current)) + ".md" : "";
       }
       function refreshPath() { if (!pathbar.hidden) pathtext.textContent = currentFilePath() || "(location unavailable)"; }
       revealBtn.addEventListener("click", () => {

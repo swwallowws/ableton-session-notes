@@ -3,6 +3,19 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import interfaceHtml from "./interface.html";
+import {
+  type SavedState,
+  type Payload,
+  readFile,
+  projectNotesDir,
+  listMd,
+  migrationOffer,
+  buildState,
+  persist,
+  bringNotes,
+  isTransientProject,
+  migrateNotebooksDir,
+} from "./notes.js";
 
 // There is no global/Song scope, so we attach to the object types reachable
 // almost everywhere you right-click.
@@ -12,6 +25,12 @@ const SCOPES = ["AudioTrack", "MidiTrack", "ClipSlot", "Scene"] as const;
 const DEFAULT_MD =
   "# TO-DO\n- [x] Create a session note\n- [ ] Capture lyrics, ideas and to-dos…\n\n# LYRICS\n♪\n";
 
+// Two presets: m is the default; s is the compact variant.
+const SIZES: Record<string, { w: number; h: number }> = {
+  s: { w: 480, h: 460 },
+  m: { w: 640, h: 560 },
+};
+
 export function activate(activation: ActivationContext) {
   const context = initialize(activation, "1.0.0");
 
@@ -19,42 +38,18 @@ export function activate(activation: ActivationContext) {
   const baseDir =
     context.environment.storageDirectory ||
     path.join(os.homedir(), ".ableton-extensions", "session-notes");
-  const notebooksDir = path.join(baseDir, "notebooks");
+  migrateNotebooksDir(baseDir); // fold any legacy "notebooks/" into "Global Notes/"
+  const notebooksDir = path.join(baseDir, "Global Notes");
   const stateFile = path.join(baseDir, "state.json");
 
-  // ---- filesystem helpers -------------------------------------------------
-  const readFile = (p: string): string => {
-    try {
-      return fs.readFileSync(p, "utf8");
-    } catch {
-      return "";
-    }
-  };
-  const sanitize = (name: string): string =>
-    name.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled";
-  const notebookPath = (name: string) =>
-    path.join(notebooksDir, sanitize(name) + ".md");
-
-  const listNotebooks = (): string[] => {
-    try {
-      return fs
-        .readdirSync(notebooksDir)
-        .filter((f) => f.endsWith(".md"))
-        .map((f) => f.replace(/\.md$/, ""))
-        .sort((a, b) => a.localeCompare(b));
-    } catch {
-      return [];
-    }
-  };
-
-  const readState = (): { current?: string } => {
+  const readState = (): SavedState => {
     try {
       return JSON.parse(readFile(stateFile));
     } catch {
       return {};
     }
   };
-  const writeState = (s: { current?: string }) => {
+  const writeState = (s: SavedState) => {
     try {
       fs.mkdirSync(baseDir, { recursive: true });
       fs.writeFileSync(stateFile, JSON.stringify(s), "utf8");
@@ -108,7 +103,7 @@ export function activate(activation: ActivationContext) {
     }
     return null;
   };
-  const detectProjectRoot = (): string | null => {
+  const detectProjectRootFromSamples = (): string | null => {
     try {
       for (const p of collectSamplePaths()) {
         const root = projectRootFromSample(p);
@@ -119,107 +114,159 @@ export function activate(activation: ActivationContext) {
     }
     return null;
   };
-  const projectFile = (root: string) => path.join(root, "Session Notes.md");
 
-  // ---- command ------------------------------------------------------------
-  type Payload = {
-    action: string;
-    target?: { type: string; name?: string };
-    projectText?: string;
-    map?: Record<string, string>;
-    renames?: { from: string; to: string }[];
+  const dbg = (...a: unknown[]) => {
+    try {
+      console.log("[session-notes]", ...a);
+    } catch {
+      /* ignore */
+    }
   };
 
-  // Gather everything the webview needs: the project note (if any), all
-  // notebooks, and which one to open first.
-  const buildState = (root: string | null) => {
-    const notebookContents: Record<string, string> = Object.fromEntries(
-      listNotebooks().map((n) => [n, readFile(notebookPath(n))]),
-    );
-
-    let projectName: string | null = null;
-    let projectDir: string | null = null;
-    let projectContent = "";
-    if (root) {
-      projectName = path.basename(root);
-      projectDir = root;
-      projectContent = readFile(projectFile(root)) || DEFAULT_MD;
-    }
-
-    // Reopen whatever was open last (project note or a specific notebook),
-    // falling back to the project note, then the first notebook.
-    let current: string;
-    const saved = readState().current || "";
-    if (root && saved === "__project__") current = "__project__";
-    else if (saved && saved in notebookContents) current = saved;
-    else if (root) current = "__project__";
-    else {
-      current = Object.keys(notebookContents)[0] || "Global";
-      if (!(current in notebookContents)) notebookContents[current] = DEFAULT_MD;
-    }
-
-    return {
-      projectName,
-      projectDir,
-      projectContent,
-      notebooksDir,
-      notebooks: Object.keys(notebookContents).sort((a, b) => a.localeCompare(b)),
-      notebookContents,
-      current,
-    };
+  // A minimal valid mono 16-bit PCM WAV (a few samples of silence). importIntoProject
+  // only accepts media Live can manage, so the probe must be a real audio file.
+  const silentWav = (): Buffer => {
+    const sampleRate = 44100;
+    const dataSize = 8; // 4 samples * 2 bytes
+    const buf = Buffer.alloc(44 + dataSize);
+    buf.write("RIFF", 0);
+    buf.writeUInt32LE(36 + dataSize, 4);
+    buf.write("WAVE", 8);
+    buf.write("fmt ", 12);
+    buf.writeUInt32LE(16, 16);
+    buf.writeUInt16LE(1, 20); // PCM
+    buf.writeUInt16LE(1, 22); // mono
+    buf.writeUInt32LE(sampleRate, 24);
+    buf.writeUInt32LE(sampleRate * 2, 28); // byte rate
+    buf.writeUInt16LE(2, 32); // block align
+    buf.writeUInt16LE(16, 34); // bits per sample
+    buf.write("data", 36);
+    buf.writeUInt32LE(dataSize, 40);
+    return buf; // sample bytes already zeroed = silence
   };
 
-  const persist = (payload: Payload, root: string | null) => {
-    if (root && typeof payload.projectText === "string")
-      fs.writeFileSync(projectFile(root), payload.projectText, "utf8");
-    // Apply renames before writing so the moved file gets the fresh content and
-    // no stale copy is left under the old name.
-    if (Array.isArray(payload.renames)) {
-      fs.mkdirSync(notebooksDir, { recursive: true });
-      for (const r of payload.renames) {
-        if (!r || !r.from || !r.to) continue;
-        const from = notebookPath(r.from);
-        const to = notebookPath(r.to);
-        try {
-          if (from !== to && fs.existsSync(from)) {
-            if (fs.existsSync(to)) fs.unlinkSync(to);
-            fs.renameSync(from, to);
-          }
-        } catch {
-          /* ignore a failed rename — the map write below still saves content */
-        }
+  // Fallback when the Set has no audio to trace (e.g. a MIDI-only or brand-new
+  // project): the SDK exposes no project path, but importIntoProject copies a
+  // file into the project folder and hands back its new path. We import a
+  // throwaway probe purely to learn where the project lives, then delete it.
+  const detectProjectRootViaImport = async (): Promise<string | null> => {
+    const tmpDir = context.environment.tempDirectory || os.tmpdir();
+    const probe = path.join(tmpDir, "session-notes-probe.wav");
+    try {
+      fs.writeFileSync(probe, silentWav());
+    } catch (e) {
+      dbg("probe write failed", String(e));
+      return null;
+    }
+    let imported: string | null = null;
+    try {
+      imported = await context.resources.importIntoProject(probe);
+      dbg("importIntoProject returned", imported);
+    } catch (e) {
+      dbg("importIntoProject threw", String(e));
+    }
+    try {
+      fs.unlinkSync(probe);
+    } catch {
+      /* ignore */
+    }
+    if (!imported) return null;
+    const root = projectRootFromSample(imported);
+    dbg("root from imported path", root);
+    // The probe was only a locator; don't leave a stray file in the project.
+    for (const p of [imported, imported + ".asd"]) {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        /* ignore */
       }
     }
-    if (payload.map && typeof payload.map === "object") {
-      fs.mkdirSync(notebooksDir, { recursive: true });
-      for (const [name, text] of Object.entries(payload.map))
-        fs.writeFileSync(notebookPath(name), text, "utf8");
-    }
+    return root;
   };
 
-  // The dropdown value that was open at close ("__project__" or a notebook name).
-  const currentSelection = (payload: Payload): string | null =>
-    payload.target?.type === "project"
-      ? "__project__"
-      : payload.target?.type === "notebook" && payload.target.name
-        ? payload.target.name
-        : null;
+  // Prefer the cheap, side-effect-free sample scan; only import a probe when
+  // that finds nothing, so audio-less Sets still get per-project notes.
+  const detectProjectRoot = async (): Promise<string | null> => {
+    const samplePaths = collectSamplePaths();
+    dbg("sample paths found:", samplePaths.length, samplePaths.slice(0, 3));
+    const fromSamples = detectProjectRootFromSamples();
+    dbg("root from samples:", fromSamples);
+    if (fromSamples) return fromSamples;
+    const fromImport = await detectProjectRootViaImport();
+    dbg("root from import:", fromImport);
+    return fromImport;
+  };
+
+  // The "bring notes" source is scoped to THIS session (host lifetime ≈ one Live
+  // launch), so a project you noted in days ago never haunts a fresh project. The
+  // Save-As flow all happens within one session, so it stays fully covered.
+  let sessionSource: { path: string; name: string } | null = null;
 
   context.commands.registerCommand("notes.open", async () => {
-    const root = detectProjectRoot();
-    const state = buildState(root);
-    const html = interfaceHtml.replace("'__STATE__'", JSON.stringify(state));
-    const url = `data:text/html,${encodeURIComponent(html)}`;
-    const result = await context.ui.showModalDialog(url, 640, 560);
-    // Autosave on close: "save" persists content; "cancel" discards it.
-    // Either way, remember which note was open so it reopens next time.
-    try {
-      const payload = JSON.parse(result) as Payload;
-      const sel = currentSelection(payload);
-      if (sel) writeState({ current: sel });
-      if (payload.action === "save") persist(payload, root);
-    } catch {
-      /* closed without a valid payload — nothing to save */
+    const root = await detectProjectRoot();
+    let size = readState().size || "m";
+    // The loop lets a size change or a "bring notes" action close and instantly
+    // reopen the pad — the SDK dialog can't be resized or refreshed in place.
+    for (;;) {
+      const st = readState();
+      const src: SavedState = { dismissed: st.dismissed ?? [] };
+      if (sessionSource) src.lastProject = sessionSource;
+      const offer = migrationOffer(root, src);
+      const state = buildState(
+        root,
+        offer && {
+          // A temp/unsaved source has an ugly timestamped folder name; the notes
+          // are really from the session you were just in, so say that instead.
+          fromName: isTransientProject(offer.fromPath) ? "your previous session" : offer.fromName,
+          count: offer.count,
+        },
+        { notebooksDir, saved: st, defaultMd: DEFAULT_MD },
+      );
+      state.size = size;
+      const html = interfaceHtml.replace("'__STATE__'", JSON.stringify(state));
+      const url = `data:text/html,${encodeURIComponent(html)}`;
+      const dim = SIZES[size] ?? { w: 640, h: 560 };
+      let payload: Payload | null = null;
+      try {
+        const result = await context.ui.showModalDialog(url, dim.w, dim.h);
+        payload = JSON.parse(result) as Payload;
+      } catch {
+        // Closed without a valid payload — nothing to save.
+        payload = null;
+      }
+      if (!payload) break;
+      if (payload.size) size = payload.size;
+
+      // Bring notes from the last project, then reopen showing them. Edits made
+      // on the placeholder note aren't persisted here — the offer only appears
+      // on an empty project, so there's nothing worth keeping.
+      if (payload.action === "bring" && offer && root) {
+        const dest = bringNotes(projectNotesDir(offer.fromPath), projectNotesDir(root));
+        const next: SavedState = { ...st, size };
+        if (dest) next.current = "p:" + dest;
+        writeState(next);
+        continue;
+      }
+
+      // Persist on save AND resize, so resizing never drops in-progress edits.
+      if (payload.action === "save" || payload.action === "resize")
+        persist(payload, root, notebooksDir);
+
+      const dismissed = new Set(st.dismissed || []);
+      if (payload.dismissMigration && root) dismissed.add(root);
+      // Remember the project we just took notes in as THIS session's offer source
+      // for a later Save-As. Includes temp/unsaved projects — their notes should
+      // carry into the saved project — but only in memory, so it never persists
+      // across restarts to nag unrelated future projects.
+      if (root && listMd(projectNotesDir(root)).length > 0)
+        sessionSource = { path: root, name: path.basename(root) };
+
+      const next: SavedState = { size, dismissed: [...dismissed] };
+      const cur = payload.current || st.current;
+      if (cur) next.current = cur;
+      writeState(next);
+      if (payload.action === "resize") continue; // reopen at the new size
+      break;
     }
   });
 

@@ -14,5 +14,8 @@ await esbuild.build({
   logLevel: "info",
   minify: production,
   sourcemap: !production,
+  // Strip the [session-notes] debug logging from release builds; dev builds keep
+  // it for diagnosing detection and the resize/persist paths.
+  drop: production ? ["console", "debugger"] : [],
   loader: { ".html": "text" },
 });

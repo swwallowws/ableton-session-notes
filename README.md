@@ -47,4 +47,4 @@ Node ≥ 22.11 is required (the SDK's minimum). Source lives in `src/extension.t
 
 ## License
 
-MIT © Bengisu ([@somaluden](https://github.com/somaluden))
+MIT © Bengisu ([@bengybade](https://github.com/bengybade))

@@ -1,6 +1,10 @@
 # Session Notes
 
-<img width="640" height="588" alt="session notes" src="https://github.com/user-attachments/assets/1068d4ae-3de4-4fac-97a9-e15717459854" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/session-notes-cover.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/session-notes-cover-light.png">
+  <img alt="Session Notes — Markdown notes that live next to your .als" src="assets/session-notes-cover.png" width="720">
+</picture>
 
 A minimal Markdown notepad for **Ableton Live 12**, built on the [Live Extensions SDK](https://ableton.com). Jot lyrics, ideas, and to-dos without leaving Live — with clean, native-feeling typography and a render-by-default Markdown view.
 
@@ -10,8 +14,10 @@ A minimal Markdown notepad for **Ableton Live 12**, built on the [Live Extension
 
 - **Markdown, rendered by default.** Write in Markdown; a single tap or `⌘E` toggles between **View** and **Edit**. Headings, bullet/numbered lists, bold/italic, blockquotes, links, and clickable GFM task lists (`- [ ]` / `- [x]`).
 - **Two kinds of notes:**
-  - **Notebooks** — global notes that live with the extension (create, rename, and switch between as many as you like).
-  - **Per-project notes** — a `Session Notes.md` written into the current Ableton project folder, so your notes **travel with the Set** when you move, share, or back it up.
+  - **Per-project notes** — saved into a `Session Notes/` folder inside the current Ableton project, so they **travel with the Set** when you move, share, or back it up. Keep as many as you like per project.
+  - **Global notes** — notes that live with the extension, for anything not tied to a specific Set.
+- **Manage notes in place.** Create, rename, and delete notes from the dropdown; copy a note's path or reveal it in your file browser; switch between a compact and default pad size.
+- **Save-As aware.** Start jotting in an unsaved Set, then save it — the pad offers to carry those notes into the new project folder.
 - **Autosave on close.** Close the pad (**Done**, `⌘S`, or `Esc`) and it saves; **Revert** discards edits made since you opened it.
 - **Remembers your place.** Reopens whatever note you had open last.
 - **Show file location** and a built-in **Markdown cheatsheet** (the `?` button).
@@ -20,12 +26,13 @@ A minimal Markdown notepad for **Ableton Live 12**, built on the [Live Extension
 
 1. Download the latest `Session-Notes-<version>.ablx` from the [Releases](../../releases) page.
 2. In Live: **Settings → Extensions**, then drag the `.ablx` file onto the page.
-3. Right-click a track, clip slot, or scene → **Session Notes…**
+3. Right-click a track, clip slot, or scene → **Session Notes → Open…**
 
 ## Usage notes
 
 - Open it from the right-click menu on an **audio/MIDI track, clip slot, or scene**. (The SDK has no global menu, so it attaches to the objects you can reach almost anywhere.)
-- **Per-project detection** relies on an audio sample being present in the Set — that's the only signal the SDK exposes for locating the project folder. A brand-new or pure-MIDI Set with no audio yet will fall back to your global notebooks until it can detect the project.
+- **Per-project detection** works even for MIDI-only Sets: if there's no audio to trace, the extension briefly imports a tiny silent probe to learn where the project folder is, then removes it.
+- An **unsaved** Set has no project folder yet, so notes live in Ableton's temporary folder until you save. Save the Set (and reopen it once) and your notes attach to the project; a hint reminds you until then.
 
 ## Develop
 

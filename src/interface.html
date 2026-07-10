@@ -17,8 +17,8 @@
         --text: #b6b7bd;        /* control foreground */
         --muted: #74767e;       /* disabled text */
         --line: #16181c;        /* dark frame */
-        --accent: #ffad56;      /* accent (default / enabled) */
-        --select: #b0ddeb;      /* text selection */
+        --accent: #e4e5e8;      /* accent (default / enabled) — colorless, brighter than text */
+        --select: #c9cace;      /* text selection — neutral */
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
@@ -39,8 +39,8 @@
         font: 13px/1.7 ui-monospace, "SF Mono", Menlo, monospace;
       }
       textarea::placeholder { color: var(--muted); }
-      textarea::selection { background: rgba(176, 221, 235, 0.30); color: var(--bg); }
-      .md ::selection { background: rgba(176, 221, 235, 0.30); color: var(--bg); }
+      textarea::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
+      .md ::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
 
       .md { padding: 14px 16px; font-size: 13px; line-height: 1.7; cursor: text; }
       #preview { min-height: 100%; }   /* fill the view so the whole empty note is clickable */
@@ -69,7 +69,7 @@
       .md li.task.done { color: var(--muted); text-decoration: line-through; }
       .md blockquote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 2px solid var(--field); color: var(--muted); }
       .md code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #2a2d33; padding: 1px 4px; border-radius: 2px; }
-      .md a { color: var(--accent); text-decoration: none; }
+      .md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
       .md hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 
       .help {
@@ -103,7 +103,7 @@
       .help-cheat td.md li { margin: 0; }
       .help-cheat td.md li.task { margin-left: -14px; }
       .help-cheat td.md input { pointer-events: none; }
-      .help-cheat td.md a { color: var(--accent); text-decoration: none; pointer-events: none; }
+      .help-cheat td.md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; pointer-events: none; }
       .migrate {
         flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
         gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line);

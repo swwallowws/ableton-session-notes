@@ -205,6 +205,10 @@ export function activate(activation: ActivationContext) {
   context.commands.registerCommand("notes.open", async () => {
     const root = await detectProjectRoot();
     let size = readState().size || "m";
+    // True right after we ask for a resize/bring reopen. The SDK can briefly refuse
+    // to open a new modal while the previous one is still tearing down, so in that
+    // window we retry instead of silently leaving the pad closed.
+    let reopening = false;
     // The loop lets a size change or a "bring notes" action close and instantly
     // reopen the pad — the SDK dialog can't be resized or refreshed in place.
     for (;;) {
@@ -227,13 +231,24 @@ export function activate(activation: ActivationContext) {
       const url = `data:text/html,${encodeURIComponent(html)}`;
       const dim = SIZES[size] ?? { w: 640, h: 560 };
       let payload: Payload | null = null;
-      try {
-        const result = await context.ui.showModalDialog(url, dim.w, dim.h);
-        payload = JSON.parse(result) as Payload;
-      } catch {
-        // Closed without a valid payload — nothing to save.
-        payload = null;
+      // On a reopen the modal can momentarily refuse (the previous one is still
+      // closing), so retry a few times before giving up — otherwise a resize or
+      // "bring notes" silently leaves the pad closed.
+      const maxTries = reopening ? 4 : 1;
+      for (let attempt = 1; attempt <= maxTries; attempt++) {
+        try {
+          const result = await context.ui.showModalDialog(url, dim.w, dim.h);
+          payload = JSON.parse(result) as Payload;
+          break;
+        } catch (e) {
+          // A genuine user close (X / Esc) resolves via beforeunload instead of
+          // rejecting, so a rejection here is a transient open failure worth retrying.
+          dbg("showModalDialog failed", attempt + "/" + maxTries, String(e));
+          payload = null;
+          if (attempt < maxTries) await new Promise((r) => setTimeout(r, 150));
+        }
       }
+      reopening = false;
       if (!payload) break;
       if (payload.size) size = payload.size;
 
@@ -245,12 +260,20 @@ export function activate(activation: ActivationContext) {
         const next: SavedState = { ...st, size };
         if (dest) next.current = "p:" + dest;
         writeState(next);
+        reopening = true;
         continue;
       }
 
       // Persist on save AND resize, so resizing never drops in-progress edits.
-      if (payload.action === "save" || payload.action === "resize")
-        persist(payload, root, notebooksDir);
+      // Guard it — a failed write must not throw out of the loop and stop a resize
+      // from reopening the pad.
+      if (payload.action === "save" || payload.action === "resize") {
+        try {
+          persist(payload, root, notebooksDir);
+        } catch (e) {
+          dbg("persist failed", String(e));
+        }
+      }
 
       const dismissed = new Set(st.dismissed || []);
       if (payload.dismissMigration && root) dismissed.add(root);
@@ -265,7 +288,7 @@ export function activate(activation: ActivationContext) {
       const cur = payload.current || st.current;
       if (cur) next.current = cur;
       writeState(next);
-      if (payload.action === "resize") continue; // reopen at the new size
+      if (payload.action === "resize") { reopening = true; continue; } // reopen at the new size
       break;
     }
   });

@@ -73,3 +73,111 @@ export const planClips = (
   }
   return plans;
 };
+
+// ---- inline timing tags -----------------------------------------------------
+// A lyric line may carry a leading [..] tag saying WHERE it goes, so lyrics are
+// placed at real positions instead of evenly. Supported tags:
+//   musical: [bar] | [bar.beat] | [bar.beat.sixteenth]  — 1-indexed, 4/4 assumed
+//   clock:   [m:ss] | [m:ss.frac]                        — seconds, → beats via bpm
+// Musical tags are tempo-map-proof (Live maps beats→time itself); clock tags rely
+// on a constant tempo (the SDK exposes no tempo map). beatsPerBar defaults to 4
+// because the SDK doesn't expose the arrangement time signature.
+
+export type TimedLine = { name: string; beat: number };
+
+export type TimingOpts = {
+  beatsPerBar?: number;
+  spacingBeats?: number;
+  startBeat?: number;
+  bpm?: number;
+};
+
+// Parse a leading [..] tag off a line. Returns the resolved beat (or null when
+// there's no tag / it doesn't parse / a clock tag has no bpm to convert with) and
+// the line text with the tag stripped.
+export const parseTimingTag = (
+  line: string,
+  opts: { beatsPerBar?: number; bpm?: number } = {},
+): { beat: number | null; name: string } => {
+  const bpb = opts.beatsPerBar && opts.beatsPerBar > 0 ? opts.beatsPerBar : 4;
+  const m = line.match(/^\s*\[([^\]]+)\]\s*(.*)$/);
+  if (!m) return { beat: null, name: line.trim() };
+  const tag = (m[1] ?? "").trim();
+  const name = (m[2] ?? "").trim();
+  // clock: m:ss(.frac)
+  const clock = tag.match(/^(\d+):(\d{1,2}(?:\.\d+)?)$/);
+  if (clock) {
+    const bpm = opts.bpm;
+    if (!bpm || bpm <= 0) return { beat: null, name }; // no tempo → can't convert
+    const seconds = parseInt(clock[1] ?? "0", 10) * 60 + parseFloat(clock[2] ?? "0");
+    return { beat: (seconds * bpm) / 60, name };
+  }
+  // musical: bar(.beat(.sixteenth)), all 1-indexed
+  const mus = tag.match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
+  if (mus) {
+    const bar = parseInt(mus[1] ?? "1", 10);
+    const beat = mus[2] ? parseInt(mus[2], 10) : 1;
+    const six = mus[3] ? parseInt(mus[3], 10) : 1;
+    return { beat: Math.max((bar - 1) * bpb + (beat - 1) + (six - 1) / 4, 0), name };
+  }
+  return { beat: null, name }; // unrecognised tag → keep text, treat as untimed
+};
+
+export const hasTimingTags = (
+  lines: string[],
+  opts: { beatsPerBar?: number; bpm?: number } = {},
+): boolean => lines.some((l) => parseTimingTag(l, opts).beat !== null);
+
+// Resolve every line to an absolute beat: tagged lines use their tag; untagged
+// lines flow after the previous line by spacingBeats (the first, if untagged,
+// starts at startBeat).
+export const resolveTimeline = (lines: string[], opts: TimingOpts = {}): TimedLine[] => {
+  const bpb = opts.beatsPerBar && opts.beatsPerBar > 0 ? opts.beatsPerBar : 4;
+  const spacing = opts.spacingBeats && opts.spacingBeats > 0 ? opts.spacingBeats : 4;
+  const start = opts.startBeat ?? 0;
+  const tagOpts: { beatsPerBar: number; bpm?: number } = { beatsPerBar: bpb };
+  if (opts.bpm != null) tagOpts.bpm = opts.bpm;
+  const out: TimedLine[] = [];
+  let prev: number | null = null;
+  for (const line of lines) {
+    const { beat, name } = parseTimingTag(line, tagOpts);
+    const pos: number = beat != null ? beat : prev == null ? start : prev + spacing;
+    out.push({ name, beat: pos });
+    prev = pos;
+  }
+  return out;
+};
+
+// Locators from resolved timing (works for tagged and untagged input).
+export const buildLocators = (lines: string[], opts: TimingOpts = {}): Locator[] =>
+  resolveTimeline(lines, opts).map((t) => ({ time: t.beat, name: t.name }));
+
+// Clips from resolved timing. When any line is tagged, each clip spans from its
+// beat to the NEXT line's beat (real durations from the timings); the last line
+// gets tailBeats. With no tags at all we fall back to branch-1 proportional
+// widths, since without timings a clip's width is the only readability signal.
+export const buildClips = (
+  lines: string[],
+  opts: TimingOpts & { minBeats?: number; tailBeats?: number } = {},
+): ClipPlan[] => {
+  const min = opts.minBeats && opts.minBeats > 0 ? opts.minBeats : MIN_CLIP_BEATS;
+  const tail = opts.tailBeats && opts.tailBeats > 0 ? opts.tailBeats : 4;
+  const timed = resolveTimeline(lines, opts);
+  if (!hasTimingTags(lines, opts)) {
+    return planClips(timed.map((t) => t.name), {
+      ...(opts.startBeat != null ? { startBeat: opts.startBeat } : {}),
+      minBeats: min,
+    });
+  }
+  // Sort by beat so gaps are computed against the next clip on the timeline.
+  const sorted = [...timed].sort((a, b) => a.beat - b.beat);
+  const clips: ClipPlan[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const cur = sorted[i];
+    if (!cur) continue;
+    const next = sorted[i + 1];
+    const duration = next ? Math.max(next.beat - cur.beat, min) : tail;
+    clips.push({ startTime: cur.beat, duration, name: cur.name });
+  }
+  return clips;
+};

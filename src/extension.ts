@@ -16,7 +16,7 @@ import {
   isTransientProject,
   migrateNotebooksDir,
 } from "./notes.js";
-import { planLocators, planClips } from "./timeline.js";
+import { buildLocators, buildClips } from "./timeline.js";
 
 // There is no global/Song scope, so we attach to the object types reachable
 // almost everywhere you right-click.
@@ -199,16 +199,26 @@ export function activate(activation: ActivationContext) {
   };
 
   // ---- send lyric lines to the arrangement timeline --------------------------
-  // The SDK exposes no playhead, so placement is deterministic (anchored at beat
-  // 0, one bar apart by default), NOT "where you're playing". Two shapes:
+  // Placement is driven by inline timing tags on the lyric lines (see timeline.ts):
+  //   • [bar] / [bar.beat] — musical time, tempo-map-proof
+  //   • [m:ss]             — clock time, converted to beats via the Set's tempo
+  // Untagged lines flow one bar apart. Two shapes:
   //   • locators — one named cue point per line (a point on the arrangement ruler)
   //   • clips    — one named MIDI clip per line on a dedicated "Lyrics" track,
-  //                each clip's width proportional to its text length
+  //                spanning to the next line (timed) or width ∝ text (untimed)
   // The math lives in timeline.ts (pure/tested); here we just drive the SDK.
   const LYRIC_TRACK = "Lyrics";
   const sendLyricsToTimeline = async (lines: string[], mode: string) => {
     const song: any = context.application.song;
     if (!song || !Array.isArray(lines) || lines.length === 0) return;
+    // Tempo is needed only to convert [m:ss] clock tags to beats; musical tags
+    // and untagged spacing don't use it. Guard the getter like everything else.
+    const tOpts: { bpm?: number } = {};
+    try {
+      if (typeof song.tempo === "number") tOpts.bpm = song.tempo;
+    } catch {
+      /* no tempo getter → clock tags simply stay untimed */
+    }
     try {
       if (mode === "clips") {
         // Reuse an existing "Lyrics" track if one is there, else make one, so
@@ -229,7 +239,7 @@ export function activate(activation: ActivationContext) {
           }
         }
         // Group the clip creation into a single undo step.
-        const plan = planClips(lines);
+        const plan = buildClips(lines, tOpts);
         await context.withinTransaction(() =>
           Promise.all(
             plan.map(async (c) => {
@@ -243,7 +253,7 @@ export function activate(activation: ActivationContext) {
           ),
         );
       } else {
-        const plan = planLocators(lines);
+        const plan = buildLocators(lines, tOpts);
         await context.withinTransaction(() =>
           Promise.all(
             plan.map(async (p) => {

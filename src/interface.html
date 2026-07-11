@@ -551,7 +551,8 @@
         tlLines = extractLyricLinesJS(pad.value);
         const n = tlLines.length;
         tltext.textContent = n
-          ? "Send " + n + (n === 1 ? " line" : " lines") + " to the arrangement as:"
+          ? "Send " + n + (n === 1 ? " line" : " lines") +
+            " (prefix a line with [17] or [1:04] to place it):"
           : "No lyric lines in this note to send.";
         document.getElementById("tlloc").disabled = !n;
         document.getElementById("tlclip").disabled = !n;

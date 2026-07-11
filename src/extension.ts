@@ -197,6 +197,30 @@ export function activate(activation: ActivationContext) {
     return fromImport;
   };
 
+  // ---- transport read (BLOCKED — see src/follow.ts) --------------------------
+  // A "follow the playhead" lyrics mode needs the live playback position. The SDK
+  // (1.0.0-beta.0) exposes NO transport, so this feature-detects a hypothetical
+  // future `song.playheadTime` / `song.isPlaying` and returns null until it
+  // exists — the whole follow feature stays gated off the capability flag below.
+  // NOTE: transport read is necessary but NOT sufficient — the pad is a one-shot
+  // modal with no host→webview channel while open, so streaming positions into it
+  // needs a second SDK addition (a non-modal panel). See follow.ts.
+  type Transport = { beat: number; playing: boolean };
+  const readTransport = (): Transport | null => {
+    const song: any = context.application.song;
+    try {
+      // TODO(sdk): swap these guessed getters for the real transport API once it
+      // ships. Guarded so a missing getter reads as "no transport", never throws.
+      const beat = song?.playheadTime ?? song?.currentTime;
+      const playing = song?.isPlaying;
+      if (typeof beat === "number" && typeof playing === "boolean")
+        return { beat, playing };
+    } catch {
+      /* no transport in this SDK build */
+    }
+    return null;
+  };
+
   // The "bring notes" source is scoped to THIS session (host lifetime ≈ one Live
   // launch), so a project you noted in days ago never haunts a fresh project. The
   // Save-As flow all happens within one session, so it stays fully covered.
@@ -227,6 +251,9 @@ export function activate(activation: ActivationContext) {
         { notebooksDir, saved: st, defaultMd: DEFAULT_MD },
       );
       state.size = size;
+      // Capability flag for the pad's (gated) "Follow playback" toggle. False on
+      // every current SDK build — readTransport() has nothing to detect yet.
+      (state as any).transportAvailable = readTransport() !== null;
       const html = interfaceHtml.replace("'__STATE__'", JSON.stringify(state));
       const url = `data:text/html,${encodeURIComponent(html)}`;
       const dim = SIZES[size] ?? { w: 640, h: 560 };

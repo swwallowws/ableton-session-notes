@@ -13,8 +13,10 @@ export type SavedState = {
 };
 
 export type Payload = {
-  action: string; // "save" | "cancel" | "resize" | "bring"
+  action: string; // "save" | "cancel" | "resize" | "bring" | "timeline"
   current?: string; // scoped id open at close
+  lines?: string[]; // lyric lines to place on the arrangement (action "timeline")
+  timelineMode?: string; // "locators" | "clips" (action "timeline")
   size?: string;
   dismissMigration?: boolean; // user declined the "bring notes" offer
   projectMap?: Record<string, string>;

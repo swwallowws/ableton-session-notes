@@ -16,6 +16,7 @@ import {
   isTransientProject,
   migrateNotebooksDir,
 } from "./notes.js";
+import { planLocators, planClips } from "./timeline.js";
 
 // There is no global/Song scope, so we attach to the object types reachable
 // almost everywhere you right-click.
@@ -197,6 +198,70 @@ export function activate(activation: ActivationContext) {
     return fromImport;
   };
 
+  // ---- send lyric lines to the arrangement timeline --------------------------
+  // The SDK exposes no playhead, so placement is deterministic (anchored at beat
+  // 0, one bar apart by default), NOT "where you're playing". Two shapes:
+  //   • locators — one named cue point per line (a point on the arrangement ruler)
+  //   • clips    — one named MIDI clip per line on a dedicated "Lyrics" track,
+  //                each clip's width proportional to its text length
+  // The math lives in timeline.ts (pure/tested); here we just drive the SDK.
+  const LYRIC_TRACK = "Lyrics";
+  const sendLyricsToTimeline = async (lines: string[], mode: string) => {
+    const song: any = context.application.song;
+    if (!song || !Array.isArray(lines) || lines.length === 0) return;
+    try {
+      if (mode === "clips") {
+        // Reuse an existing "Lyrics" track if one is there, else make one, so
+        // repeated sends don't pile up duplicate tracks.
+        let track: any = arr(song.tracks).find((t) => {
+          try {
+            return t?.name === LYRIC_TRACK;
+          } catch {
+            return false;
+          }
+        });
+        if (!track) {
+          track = await song.createMidiTrack();
+          try {
+            track.name = LYRIC_TRACK;
+          } catch {
+            /* naming is best-effort */
+          }
+        }
+        // Group the clip creation into a single undo step.
+        const plan = planClips(lines);
+        await context.withinTransaction(() =>
+          Promise.all(
+            plan.map(async (c) => {
+              try {
+                const clip: any = await track.createMidiClip(c.startTime, c.duration);
+                clip.name = c.name;
+              } catch (e) {
+                dbg("createMidiClip failed", String(e));
+              }
+            }),
+          ),
+        );
+      } else {
+        const plan = planLocators(lines);
+        await context.withinTransaction(() =>
+          Promise.all(
+            plan.map(async (p) => {
+              try {
+                const cue: any = await song.createCuePoint(p.time);
+                cue.name = p.name;
+              } catch (e) {
+                dbg("createCuePoint failed", String(e));
+              }
+            }),
+          ),
+        );
+      }
+    } catch (e) {
+      dbg("sendLyricsToTimeline failed", String(e));
+    }
+  };
+
   // The "bring notes" source is scoped to THIS session (host lifetime ≈ one Live
   // launch), so a project you noted in days ago never haunts a fresh project. The
   // Save-As flow all happens within one session, so it stays fully covered.
@@ -260,6 +325,23 @@ export function activate(activation: ActivationContext) {
         const next: SavedState = { ...st, size };
         if (dest) next.current = "p:" + dest;
         writeState(next);
+        reopening = true;
+        continue;
+      }
+
+      // Send the current note's lyric lines to the arrangement, then reopen so
+      // the user lands back in the pad. Persist first so the edits that produced
+      // those lines aren't lost.
+      if (payload.action === "timeline") {
+        try {
+          persist(payload, root, notebooksDir);
+        } catch (e) {
+          dbg("persist failed (timeline)", String(e));
+        }
+        const mode = payload.timelineMode === "clips" ? "clips" : "locators";
+        await sendLyricsToTimeline(payload.lines ?? [], mode);
+        const cur = payload.current || st.current;
+        writeState({ ...st, size, ...(cur ? { current: cur } : {}) });
         reopening = true;
         continue;
       }

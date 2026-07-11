@@ -26,7 +26,7 @@ A minimal Markdown notepad for **Ableton Live 12**, built on the [Live Extension
 
 1. Download the latest `Session-Notes-<version>.ablx` from the [Releases](../../releases) page.
 2. In Live: **Settings → Extensions**, then drag the `.ablx` file onto the page.
-3. Right-click a track, clip slot, or scene → **Session Notes → Open…**
+3. Right-click a track, clip slot, or scene → **Extensions → Session Notes: Open…**
 
 ## Usage notes
 

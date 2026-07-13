@@ -11,6 +11,8 @@ import {
   resolveTimeline,
   buildLocators,
   buildClips,
+  placeWithoutCollision,
+  NUDGE_BEATS,
 } from "../src/timeline.js";
 
 let passed = 0;
@@ -157,6 +159,25 @@ test("buildClips: untagged input falls back to proportional widths", () => {
 test("buildClips: never emits below the floor even with equal beats", () => {
   const clips = buildClips(["[1] a", "[1] b"]); // same beat → 0 gap
   for (const c of clips) assert.ok(c.duration >= MIN_CLIP_BEATS);
+});
+
+test("placeWithoutCollision: leaves clash-free beats untouched", () => {
+  assert.deepEqual(placeWithoutCollision([0, 4, 8], [100]), [0, 4, 8]);
+});
+
+test("placeWithoutCollision: nudges off an occupied beat (user's marker)", () => {
+  // A line at beat 16 where the user's marker already sits → +NUDGE_BEATS.
+  assert.deepEqual(placeWithoutCollision([16], [16]), [16 + NUDGE_BEATS]);
+});
+
+test("placeWithoutCollision: nudges duplicates within the same batch apart", () => {
+  assert.deepEqual(placeWithoutCollision([8, 8, 8]), [8, 8 + NUDGE_BEATS, 8 + 2 * NUDGE_BEATS]);
+});
+
+test("placeWithoutCollision: cascades past a second occupied slot", () => {
+  // Target 8; both 8 and 8+eps are taken → lands on 8+2eps.
+  const got = placeWithoutCollision([8], [8, 8 + NUDGE_BEATS]);
+  assert.ok(Math.abs(got[0]! - (8 + 2 * NUDGE_BEATS)) < 1e-9);
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

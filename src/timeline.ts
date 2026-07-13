@@ -181,3 +181,29 @@ export const buildClips = (
   }
   return clips;
 };
+
+// A locator (cue point) can't share an exact beat with another. When a lyric
+// locator would land on an already-occupied beat — the user's own marker, or an
+// earlier line placed this pass — nudge it forward by a tiny epsilon until it's
+// free, so nothing is dropped and no existing marker gets overwritten. Returns
+// the resolved beat per input, in order.
+export const NUDGE_BEATS = 1 / 32; // a hair — ~2ms at 120 BPM, still visibly adjacent
+
+export const placeWithoutCollision = (
+  beats: number[],
+  occupied: number[] = [],
+  opts: { epsilon?: number; tolerance?: number } = {},
+): number[] => {
+  const eps = opts.epsilon && opts.epsilon > 0 ? opts.epsilon : NUDGE_BEATS;
+  const tol = opts.tolerance && opts.tolerance > 0 ? opts.tolerance : 1e-6;
+  const taken = occupied.slice();
+  const isTaken = (b: number) => taken.some((t) => Math.abs(t - b) < tol);
+  const out: number[] = [];
+  for (const beat of beats) {
+    let b = beat;
+    while (isTaken(b)) b += eps;
+    taken.push(b);
+    out.push(b);
+  }
+  return out;
+};

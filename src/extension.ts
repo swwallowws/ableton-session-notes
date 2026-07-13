@@ -16,7 +16,7 @@ import {
   isTransientProject,
   migrateNotebooksDir,
 } from "./notes.js";
-import { buildLocators, buildClips } from "./timeline.js";
+import { buildLocators, buildClips, placeWithoutCollision } from "./timeline.js";
 
 // There is no global/Song scope, so we attach to the object types reachable
 // almost everywhere you right-click.
@@ -208,6 +208,9 @@ export function activate(activation: ActivationContext) {
   //                spanning to the next line (timed) or width ∝ text (untimed)
   // The math lives in timeline.ts (pure/tested); here we just drive the SDK.
   const LYRIC_TRACK = "Lyrics";
+  // Lyric locators are named "♪ <line>" so a re-send can find and clear only OUR
+  // locators, leaving the user's own section markers (Verse, Drop…) untouched.
+  const LYRIC_MARK = "♪ ";
   const sendLyricsToTimeline = async (lines: string[], mode: string) => {
     const song: any = context.application.song;
     if (!song || !Array.isArray(lines) || lines.length === 0) return;
@@ -237,6 +240,18 @@ export function activate(activation: ActivationContext) {
           } catch {
             /* naming is best-effort */
           }
+        } else {
+          // Start from scratch: wipe every existing clip on the Lyrics track (it's
+          // ours by convention) before rebuilding, so a re-send fully replaces.
+          const existing = arr(track.arrangementClips);
+          if (existing.length)
+            await context.withinTransaction(() =>
+              Promise.all(
+                existing.map((c: any) =>
+                  track.deleteClip(c).catch((e: any) => dbg("deleteClip failed", String(e))),
+                ),
+              ),
+            );
         }
         // Group the clip creation into a single undo step.
         const plan = buildClips(lines, tOpts);
@@ -253,13 +268,44 @@ export function activate(activation: ActivationContext) {
           ),
         );
       } else {
+        // Start from scratch: clear only OUR lyric locators (name-prefixed), so a
+        // re-send replaces them without touching the user's own section markers.
+        const mine = arr(song.cuePoints).filter((cp: any) => {
+          try {
+            return typeof cp?.name === "string" && cp.name.startsWith(LYRIC_MARK);
+          } catch {
+            return false;
+          }
+        });
+        if (mine.length)
+          await context.withinTransaction(() =>
+            Promise.all(
+              mine.map((cp: any) =>
+                song.deleteCuePoint(cp).catch((e: any) => dbg("deleteCuePoint failed", String(e))),
+              ),
+            ),
+          );
+        // Cue points can't share an exact beat, so a lyric locator that lands on
+        // one of the user's OWN markers would be dropped (and creating there can
+        // hijack their marker). Gather the beats still occupied — everything left
+        // after clearing ours — and nudge our new locators off any clash.
+        const occupied = arr(song.cuePoints)
+          .map((cp: any) => {
+            try {
+              return typeof cp?.time === "number" ? cp.time : null;
+            } catch {
+              return null;
+            }
+          })
+          .filter((t: number | null): t is number => t != null);
         const plan = buildLocators(lines, tOpts);
+        const times = placeWithoutCollision(plan.map((p) => p.time), occupied);
         await context.withinTransaction(() =>
           Promise.all(
-            plan.map(async (p) => {
+            plan.map(async (p, i) => {
               try {
-                const cue: any = await song.createCuePoint(p.time);
-                cue.name = p.name;
+                const cue: any = await song.createCuePoint(times[i] ?? p.time);
+                cue.name = LYRIC_MARK + p.name;
               } catch (e) {
                 dbg("createCuePoint failed", String(e));
               }

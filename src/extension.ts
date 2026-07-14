@@ -185,12 +185,19 @@ export function activate(activation: ActivationContext) {
       dbg("root via Samples fallback", root);
     }
     dbg("root from imported path", root);
-    // The probe was only a locator; don't leave a stray file in the project.
+    // The probe was only a locator; delete it (and its .asd analysis sidecar) so
+    // no stray sample is left in the project. Live can briefly hold a lock on a
+    // just-imported file (seen on Windows), so retry a few times before giving up.
     for (const p of [imported, imported + ".asd"]) {
-      try {
-        fs.unlinkSync(p);
-      } catch {
-        /* ignore */
+      for (let i = 0; i < 6; i++) {
+        try {
+          if (!fs.existsSync(p)) break; // nothing there (e.g. no .asd was written)
+          fs.unlinkSync(p);
+          break;
+        } catch (e) {
+          dbg("probe cleanup retry", p, String(e));
+          if (i < 5) await new Promise((r) => setTimeout(r, 150));
+        }
       }
     }
     return root;

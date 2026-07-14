@@ -104,6 +104,12 @@
       .help-cheat td.md li.task { margin-left: -14px; }
       .help-cheat td.md input { pointer-events: none; }
       .help-cheat td.md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; pointer-events: none; }
+      .help-sec { margin-top: 18px; }
+      .help-sec > strong { display: block; font-size: 13px; margin-bottom: 6px; }
+      .help-how code, .help-cheat td.md code {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
+        background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
+      }
       .migrate {
         flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
         gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line);
@@ -139,21 +145,31 @@
       .pathbar .pathcopy.ok { color: var(--accent); }
       .pathbar .pathcopy svg { display: block; }
       .bar {
-        display: flex; align-items: center; justify-content: space-between;
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
         height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
         background: var(--surface); flex: 0 0 auto; user-select: none;
       }
-      .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
-      .tools { display: flex; align-items: center; gap: 2px; }
-      /* Flat, boxy controls with a subtle frame and clear hover — Live's style. */
+      /* Note picker + tools on the left, actions on the right; space-between keeps
+         a gap in the middle and respects the bar padding so Revert/Done stay clear
+         of the edge. The fixed-width select keeps the left group from overflowing. */
+      .left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; }
+      .tools { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+      /* Flat, boxy controls with a subtle frame and clear hover — Live's style.
+         Fixed width so the <select> doesn't balloon to its widest option. */
       .nb {
         font: inherit; color: var(--text); background: var(--field);
         border: 1px solid var(--line); border-radius: 3px; height: 24px;
-        padding: 0 6px; max-width: 170px;
+        padding: 0 6px; width: 128px; flex: 0 0 auto;
       }
       .nb:hover { background: var(--field-hover); }
-      .count { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; margin-right: 4px; }
-      .actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+      .count { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      /* Small mode is tight — drop the word count to keep Revert/Done roomy. */
+      body.small .count { display: none; }
+      /* Divider sets the note controls apart from Revert / Done. */
+      .actions {
+        display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+        padding-left: 10px; border-left: 1px solid var(--line);
+      }
       button {
         font: inherit; height: 24px; padding: 0 12px; border: 1px solid transparent;
         border-radius: 3px; background: var(--field); color: var(--text); cursor: pointer;
@@ -222,8 +238,7 @@
         <span class="tools">
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
           <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
-          <button id="timelineBtn" class="icon ghost tip-left" data-tip="Send lyrics to timeline" aria-label="Send lyrics to arrangement timeline"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 H15" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.4 V10.6 M8 5.4 V10.6 M12 5.4 V10.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-          <button id="helpBtn" class="icon ghost tip-left" data-tip="Markdown help" aria-label="Markdown help">?</button>
+          <button id="helpBtn" class="icon ghost tip-left" data-tip="Help & lyric timing" aria-label="Help and lyric timing">?</button>
           <button id="sizeToggle" class="icon ghost tip-left" data-tip="Resize" aria-label="Resize pad"></button>
         </span>
       </div>
@@ -237,7 +252,7 @@
     <div class="help" id="help" hidden>
       <div class="help-card">
         <div class="help-top">
-          <strong>Markdown &amp; how it works</strong>
+          <strong>Markdown &amp; lyric timing</strong>
           <button id="helpClose" class="icon ghost" aria-label="Close help">✕</button>
         </div>
         <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View.</p>
@@ -245,12 +260,31 @@
           <thead><tr><th>type this</th><th>see this</th></tr></thead>
           <tbody id="cheatBody"></tbody>
         </table>
+
+        <div class="help-sec">
+          <strong>Put lyrics on the timeline</strong>
+          <p class="help-how">Tag a lyric line with a position, then use the note menu&apos;s <b>Send lyrics to timeline…</b> to drop a <b>locator</b> or a <b>clip</b> per line. Any untagged line falls one bar after the line above it.</p>
+          <table class="help-cheat">
+            <thead><tr><th>tag a line</th><th>lands it at</th></tr></thead>
+            <tbody>
+              <tr><td class="raw"><code>[17] words</code></td><td class="md">bar 17</td></tr>
+              <tr><td class="raw"><code>[17.3] words</code></td><td class="md">bar 17, beat 3</td></tr>
+              <tr><td class="raw"><code>[1:04] words</code></td><td class="md">1 min 4 sec — uses the Set tempo</td></tr>
+              <tr><td class="raw"><code>[=8*4] words</code></td><td class="md">beat 32 — do math with <code>+ - * / ( )</code></td></tr>
+              <tr><td class="raw"><code>[=bpm/2] words</code></td><td class="md">30 s in at any tempo — <code>bpm</code> is the Set tempo</td></tr>
+            </tbody>
+          </table>
+          <p class="help-how">Bar tags like <code>[17]</code> stay put through tempo changes; clock tags like <code>[1:04]</code> assume a steady tempo.</p>
+        </div>
       </div>
     </div>
 
     <script>
       // Replaced by the extension with the state object.
       const STATE = '__STATE__';
+
+      // Compact layout tweaks (e.g. hiding the word count) key off this class.
+      document.body.classList.toggle("small", ((STATE && STATE.size) || "m") === "s");
 
       const pad = document.getElementById("pad");
       const preview = document.getElementById("preview");
@@ -310,6 +344,11 @@
         renameOpt = new Option("Rename note…", "__rename__");
         nbSelect.appendChild(renameOpt);
         nbSelect.appendChild(new Option("Delete note…", "__delete__"));
+        // Second group: send this note's lyric lines to the arrangement.
+        const sep2 = new Option("──────────", "__sep2__");
+        sep2.disabled = true;
+        nbSelect.appendChild(sep2);
+        nbSelect.appendChild(new Option("Send lyrics to timeline…", "__timeline__"));
         nbSelect.value = current;
         nbSelect.dataset.tip = folderFor(current);
       }
@@ -401,6 +440,7 @@
         else if (v === "__newnb__") { createNote("g"); enterRenameMode(); }
         else if (v === "__rename__") { nbSelect.value = current; enterRenameMode(); }
         else if (v === "__delete__") { nbSelect.value = current; askDelete(); }
+        else if (v === "__timeline__") { nbSelect.value = current; openTimelineBar(); }
         else selectValue(v);
       });
       newNb.addEventListener("blur", () => { if (nbMode) commitNbInput(); });
@@ -546,18 +586,19 @@
       const tltext = document.getElementById("tltext");
       let tlLines = [];
       let pendingTimeline = null;   // {lines, mode} attached to the "timeline" post
-      document.getElementById("timelineBtn").addEventListener("click", () => {
+      // Opened from the note menu ("Send lyrics to timeline…").
+      function openTimelineBar() {
         contents[current] = pad.value;                 // capture latest edits
         tlLines = extractLyricLinesJS(pad.value);
         const n = tlLines.length;
         tltext.textContent = n
           ? "Send " + n + (n === 1 ? " line" : " lines") +
-            " (prefix a line with [17] or [1:04] to place it):"
+            " to the arrangement — tag a line with [17] or [1:04] to place it (see ?):"
           : "No lyric lines in this note to send.";
         document.getElementById("tlloc").disabled = !n;
         document.getElementById("tlclip").disabled = !n;
         tlbar.hidden = false;
-      });
+      }
       document.getElementById("tlno").addEventListener("click", () => { tlbar.hidden = true; });
       const sendTimeline = (mode) => {
         if (!tlLines.length) { tlbar.hidden = true; return; }
@@ -690,7 +731,11 @@
       function sanitizeName(n) { return (n.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled"); }
       function currentFilePath() {
         const dir = folderFor(current);
-        return dir ? dir + "/" + sanitizeName(nameOf(current)) + ".md" : "";
+        if (!dir) return "";
+        // Match the host's separator so the shown/copied path is native on Windows
+        // (backslash dirs) as well as macOS — the dir comes straight from the host.
+        const sep = dir.indexOf("\\") !== -1 ? "\\" : "/";
+        return dir + sep + sanitizeName(nameOf(current)) + ".md";
       }
       function refreshPath() { if (!pathbar.hidden) pathtext.textContent = currentFilePath() || "(location unavailable)"; }
       revealBtn.addEventListener("click", () => {

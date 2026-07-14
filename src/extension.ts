@@ -172,7 +172,18 @@ export function activate(activation: ActivationContext) {
       /* ignore */
     }
     if (!imported) return null;
-    const root = projectRootFromSample(imported);
+    let root = projectRootFromSample(imported);
+    // Fallback: importIntoProject always lands the file in the project's Samples
+    // folder, so a successful import means we ARE in a project even if the
+    // "Ableton Project Info" marker walk missed it (reported on Windows, where
+    // per-project notes never appeared). Take the parent of the nearest "Samples"
+    // ancestor as the root.
+    if (!root) {
+      const parts = imported.split(/[\\/]/);
+      const si = parts.map((p) => p.toLowerCase()).lastIndexOf("samples");
+      if (si > 0) root = parts.slice(0, si).join(path.sep);
+      dbg("root via Samples fallback", root);
+    }
     dbg("root from imported path", root);
     // The probe was only a locator; don't leave a stray file in the project.
     for (const p of [imported, imported + ".asd"]) {

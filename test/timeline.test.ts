@@ -13,6 +13,7 @@ import {
   buildClips,
   placeWithoutCollision,
   NUDGE_BEATS,
+  evalExpr,
 } from "../src/timeline.js";
 
 let passed = 0;
@@ -178,6 +179,39 @@ test("placeWithoutCollision: cascades past a second occupied slot", () => {
   // Target 8; both 8 and 8+eps are taken → lands on 8+2eps.
   const got = placeWithoutCollision([8], [8, 8 + NUDGE_BEATS]);
   assert.ok(Math.abs(got[0]! - (8 + 2 * NUDGE_BEATS)) < 1e-9);
+});
+
+// ---- arithmetic expression tags ----
+
+test("evalExpr: arithmetic, precedence, parentheses, unary minus", () => {
+  assert.equal(evalExpr("8*4"), 32);
+  assert.equal(evalExpr("2 + 3 * 4"), 14);
+  assert.equal(evalExpr("(2 + 3) * 4"), 20);
+  assert.equal(evalExpr("16.5 / 2"), 8.25);
+  assert.equal(evalExpr("-4 + 10"), 6);
+});
+
+test("evalExpr: resolves known vars, rejects unknown ones", () => {
+  assert.equal(evalExpr("bpm/2", { bpm: 120 }), 60);
+  assert.equal(evalExpr("bpm*2 + 4", { bpm: 90 }), 184);
+  assert.equal(evalExpr("bpm/2", {}), null); // no bpm supplied
+  assert.equal(evalExpr("nope", { bpm: 120 }), null);
+});
+
+test("evalExpr: malformed input → null (no throw, no eval)", () => {
+  assert.equal(evalExpr("2 +"), null);
+  assert.equal(evalExpr("(2 + 3"), null);
+  assert.equal(evalExpr("2 3"), null);
+  assert.equal(evalExpr(""), null);
+});
+
+test("parseTimingTag: [=expr] resolves to beats, bpm-aware", () => {
+  assert.deepEqual(parseTimingTag("[=32] line"), { beat: 32, name: "line" });
+  assert.deepEqual(parseTimingTag("[=8*4] line"), { beat: 32, name: "line" });
+  // [=bpm/2] is always 30s worth of beats regardless of tempo.
+  assert.deepEqual(parseTimingTag("[=bpm/2] x", { bpm: 128 }), { beat: 64, name: "x" });
+  assert.deepEqual(parseTimingTag("[=bpm/2] x"), { beat: null, name: "x" }); // no bpm
+  assert.deepEqual(parseTimingTag("[=-5] x"), { beat: 0, name: "x" }); // clamped ≥ 0
 });
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

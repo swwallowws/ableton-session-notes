@@ -92,6 +92,64 @@ export type TimingOpts = {
   bpm?: number;
 };
 
+// A tiny, safe arithmetic evaluator for the `[=…]` expression tag — supports
+// `+ - * /`, parentheses, unary minus, decimals, and named variables (we pass
+// `bpm`). No eval(): a hand-rolled recursive-descent parser. Returns the number,
+// or null on any malformed input or unknown identifier.
+export const evalExpr = (
+  src: string,
+  vars: Record<string, number> = {},
+): number | null => {
+  const tokens = src.match(/\d*\.?\d+|[a-zA-Z_]+|[+\-*/()]/g);
+  if (!tokens) return null;
+  let i = 0;
+  let ok = true;
+  const peek = (): string | undefined => tokens[i];
+  const eat = (): string | undefined => tokens[i++];
+  const factor = (): number => {
+    const t = peek();
+    if (t === "-") return eat(), -factor();
+    if (t === "+") return eat(), factor();
+    if (t === "(") {
+      eat();
+      const v = expr();
+      if (peek() === ")") eat();
+      else ok = false;
+      return v;
+    }
+    if (t === undefined) return (ok = false), 0;
+    if (/^\d*\.?\d+$/.test(t)) return eat(), parseFloat(t);
+    if (/^[a-zA-Z_]+$/.test(t)) {
+      eat();
+      const v = vars[t];
+      if (v === undefined) return (ok = false), 0;
+      return v;
+    }
+    return (ok = false), eat(), 0;
+  };
+  const term = (): number => {
+    let v = factor();
+    for (let op = peek(); op === "*" || op === "/"; op = peek()) {
+      eat();
+      const r = factor();
+      v = op === "*" ? v * r : v / r;
+    }
+    return v;
+  };
+  const expr = (): number => {
+    let v = term();
+    for (let op = peek(); op === "+" || op === "-"; op = peek()) {
+      eat();
+      const r = term();
+      v = op === "+" ? v + r : v - r;
+    }
+    return v;
+  };
+  const result = expr();
+  if (!ok || i !== tokens.length || !isFinite(result)) return null;
+  return result;
+};
+
 // Parse a leading [..] tag off a line. Returns the resolved beat (or null when
 // there's no tag / it doesn't parse / a clock tag has no bpm to convert with) and
 // the line text with the tag stripped.
@@ -104,6 +162,13 @@ export const parseTimingTag = (
   if (!m) return { beat: null, name: line.trim() };
   const tag = (m[1] ?? "").trim();
   const name = (m[2] ?? "").trim();
+  // expression: [=…] → beats, with `bpm` available. e.g. [=32], [=8*4], [=bpm/2].
+  if (tag.startsWith("=")) {
+    const vars: Record<string, number> = {};
+    if (opts.bpm && opts.bpm > 0) vars.bpm = opts.bpm;
+    const v = evalExpr(tag.slice(1), vars);
+    return { beat: v == null ? null : Math.max(v, 0), name };
+  }
   // clock: m:ss(.frac)
   const clock = tag.match(/^(\d+):(\d{1,2}(?:\.\d+)?)$/);
   if (clock) {

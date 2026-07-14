@@ -264,7 +264,7 @@
 
         <div class="help-sec">
           <strong>Put lyrics on the timeline</strong>
-          <p class="help-how">Tag a lyric line with a position, then use the note menu&apos;s <b>Send lyrics to timeline…</b> to drop a <b>locator</b> or a <b>clip</b> per line. Any untagged line falls one bar after the line above it.</p>
+          <p class="help-how">Tag a lyric line with a position, then click the <b>timeline button</b> in the toolbar (the ticked-line icon) to drop a <b>locator</b> or a <b>clip</b> per line. Any untagged line falls one bar after the line above it.</p>
           <table class="help-cheat">
             <thead><tr><th>tag a line</th><th>lands it at</th></tr></thead>
             <tbody>
@@ -597,8 +597,12 @@
       document.getElementById("cornerTimeline").addEventListener("click", openTimelineBar);
       document.getElementById("tlno").addEventListener("click", () => { tlbar.hidden = true; });
       const sendTimeline = (mode) => {
-        if (!tlLines.length) { tlbar.hidden = true; return; }
-        pendingTimeline = { lines: tlLines, mode: mode };
+        // Re-extract at click time: the pad stays editable behind this bar, so
+        // lines added/changed after it opened must still be picked up.
+        contents[current] = pad.value;
+        const lines = extractLyricLinesJS(pad.value);
+        if (!lines.length) { tlbar.hidden = true; return; }
+        pendingTimeline = { lines: lines, mode: mode };
         post("timeline");
       };
       document.getElementById("tlloc").addEventListener("click", () => sendTimeline("locators"));
@@ -747,6 +751,10 @@
         if (e.key === "Escape" && !helpPanel.hidden) { e.preventDefault(); closeHelp(); return; }
         if (mod && (k === "s" || k === "w")) { e.preventDefault(); post("save"); return; }
         if (e.key === "Escape") {
+          // Back out of a transient bottom strip first, rather than saving/closing.
+          if (!confirmBar.hidden) { e.preventDefault(); confirmBar.hidden = true; return; }
+          if (!tlbar.hidden) { e.preventDefault(); tlbar.hidden = true; return; }
+          if (!migrate.hidden) { e.preventDefault(); dismissedMigration = true; migrate.hidden = true; return; }
           e.preventDefault();
           if (editing) setMode(false);   // edit → back to View
           else post("save");             // View → save & close

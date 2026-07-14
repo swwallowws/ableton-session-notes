@@ -162,6 +162,25 @@ test("buildClips: never emits below the floor even with equal beats", () => {
   for (const c of clips) assert.ok(c.duration >= MIN_CLIP_BEATS);
 });
 
+test("buildClips: clips on the same/too-close beat never overlap", () => {
+  // Two lines tagged at the same beat, and a clock pair closer than the floor,
+  // must produce strictly non-overlapping clips (a later clip would otherwise
+  // overwrite an earlier one on the arrangement track).
+  const cases = [
+    buildClips(["[1] a", "[1] b", "[1] c"]),
+    buildClips(["[0:00] a", "[0:00.05] b"], { bpm: 120 }),
+  ];
+  for (const clips of cases) {
+    for (let i = 1; i < clips.length; i++) {
+      const prevEnd = clips[i - 1]!.startTime + clips[i - 1]!.duration;
+      assert.ok(
+        clips[i]!.startTime >= prevEnd - 1e-9,
+        `clip ${i} starts at ${clips[i]!.startTime}, overlapping prev end ${prevEnd}`,
+      );
+    }
+  }
+});
+
 test("placeWithoutCollision: leaves clash-free beats untouched", () => {
   assert.deepEqual(placeWithoutCollision([0, 4, 8], [100]), [0, 4, 8]);
 });
@@ -179,6 +198,13 @@ test("placeWithoutCollision: cascades past a second occupied slot", () => {
   // Target 8; both 8 and 8+eps are taken → lands on 8+2eps.
   const got = placeWithoutCollision([8], [8, 8 + NUDGE_BEATS]);
   assert.ok(Math.abs(got[0]! - (8 + 2 * NUDGE_BEATS)) < 1e-9);
+});
+
+test("placeWithoutCollision: an epsilon below tolerance still terminates", () => {
+  // A nudge smaller than the match tolerance would loop forever without the
+  // clamp; the result must resolve off the occupied slot in finite time.
+  const got = placeWithoutCollision([0], [0], { epsilon: 1e-9, tolerance: 1e-6 });
+  assert.ok(got[0]! > 0, "should have nudged off the occupied beat");
 });
 
 // ---- arithmetic expression tags ----
@@ -203,6 +229,15 @@ test("evalExpr: malformed input → null (no throw, no eval)", () => {
   assert.equal(evalExpr("(2 + 3"), null);
   assert.equal(evalExpr("2 3"), null);
   assert.equal(evalExpr(""), null);
+});
+
+test("evalExpr: stray characters are rejected, not silently dropped", () => {
+  // The tokenizer only collects matches, so a stray char would vanish and the
+  // rest would evaluate — these must be null, not a confident wrong number.
+  assert.equal(evalExpr("100@"), null);
+  assert.equal(evalExpr("8*!4"), null);
+  assert.equal(evalExpr("2 & 3"), null);
+  assert.equal(evalExpr("8/0"), null); // Infinity → rejected by isFinite guard
 });
 
 test("parseTimingTag: [=expr] resolves to beats, bpm-aware", () => {

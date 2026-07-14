@@ -258,56 +258,51 @@ export function activate(activation: ActivationContext) {
           } catch {
             /* naming is best-effort */
           }
-        } else {
-          // Start from scratch: wipe every existing clip on the Lyrics track (it's
-          // ours by convention) before rebuilding, so a re-send fully replaces.
-          const existing = arr(track.arrangementClips);
-          if (existing.length)
-            await context.withinTransaction(() =>
-              Promise.all(
-                existing.map((c: any) =>
-                  track.deleteClip(c).catch((e: any) => dbg("deleteClip failed", String(e))),
-                ),
-              ),
-            );
         }
-        // Group the clip creation into a single undo step.
+        // Replace atomically: clearing the old clips and creating the new ones go
+        // in ONE transaction (one undo step) and the delete finishes before the
+        // create begins, so a failure can't leave the track wiped-but-empty and
+        // an overlapping new clip can't race a not-yet-deleted old one.
+        const existing = arr(track.arrangementClips);
         const plan = buildClips(lines, tOpts);
         await context.withinTransaction(() =>
           Promise.all(
-            plan.map(async (c) => {
-              try {
-                const clip: any = await track.createMidiClip(c.startTime, c.duration);
-                clip.name = c.name;
-              } catch (e) {
-                dbg("createMidiClip failed", String(e));
-              }
-            }),
+            existing.map((c: any) =>
+              track.deleteClip(c).catch((e: any) => dbg("deleteClip failed", String(e))),
+            ),
+          ).then(() =>
+            Promise.all(
+              plan.map(async (c) => {
+                try {
+                  const clip: any = await track.createMidiClip(c.startTime, c.duration);
+                  clip.name = c.name;
+                } catch (e) {
+                  dbg("createMidiClip failed", String(e));
+                }
+              }),
+            ),
           ),
         );
       } else {
-        // Start from scratch: clear only OUR lyric locators (name-prefixed), so a
-        // re-send replaces them without touching the user's own section markers.
-        const mine = arr(song.cuePoints).filter((cp: any) => {
+        // Take a single snapshot of the cue points and split it: OURS (name-
+        // prefixed, to be cleared) and everything else (the user's own markers,
+        // which stay). Deriving `occupied` from this same snapshot — rather than
+        // re-reading after the delete — avoids depending on when the model
+        // reflects the deletion, so re-sends don't drift a locator forward.
+        const allCues = arr(song.cuePoints);
+        const isMine = (cp: any) => {
           try {
             return typeof cp?.name === "string" && cp.name.startsWith(LYRIC_MARK);
           } catch {
             return false;
           }
-        });
-        if (mine.length)
-          await context.withinTransaction(() =>
-            Promise.all(
-              mine.map((cp: any) =>
-                song.deleteCuePoint(cp).catch((e: any) => dbg("deleteCuePoint failed", String(e))),
-              ),
-            ),
-          );
+        };
+        const mine = allCues.filter(isMine);
         // Cue points can't share an exact beat, so a lyric locator that lands on
         // one of the user's OWN markers would be dropped (and creating there can
-        // hijack their marker). Gather the beats still occupied — everything left
-        // after clearing ours — and nudge our new locators off any clash.
-        const occupied = arr(song.cuePoints)
+        // hijack their marker). Nudge our new locators off any clash with those.
+        const occupied = allCues
+          .filter((cp: any) => !isMine(cp))
           .map((cp: any) => {
             try {
               return typeof cp?.time === "number" ? cp.time : null;
@@ -318,16 +313,24 @@ export function activate(activation: ActivationContext) {
           .filter((t: number | null): t is number => t != null);
         const plan = buildLocators(lines, tOpts);
         const times = placeWithoutCollision(plan.map((p) => p.time), occupied);
+        // Replace atomically: clear ours, then create the new ones, in ONE
+        // transaction (one undo step); the delete completes before the create.
         await context.withinTransaction(() =>
           Promise.all(
-            plan.map(async (p, i) => {
-              try {
-                const cue: any = await song.createCuePoint(times[i] ?? p.time);
-                cue.name = LYRIC_MARK + p.name;
-              } catch (e) {
-                dbg("createCuePoint failed", String(e));
-              }
-            }),
+            mine.map((cp: any) =>
+              song.deleteCuePoint(cp).catch((e: any) => dbg("deleteCuePoint failed", String(e))),
+            ),
+          ).then(() =>
+            Promise.all(
+              plan.map(async (p, i) => {
+                try {
+                  const cue: any = await song.createCuePoint(times[i] ?? p.time);
+                  cue.name = LYRIC_MARK + p.name;
+                } catch (e) {
+                  dbg("createCuePoint failed", String(e));
+                }
+              }),
+            ),
           ),
         );
       }

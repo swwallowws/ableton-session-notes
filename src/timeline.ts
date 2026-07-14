@@ -102,6 +102,10 @@ export const evalExpr = (
 ): number | null => {
   const tokens = src.match(/\d*\.?\d+|[a-zA-Z_]+|[+\-*/()]/g);
   if (!tokens) return null;
+  // The tokenizer only COLLECTS matches, so any stray character is silently
+  // dropped ("100@" → ["100"]). Reject when the tokens don't reconstruct the
+  // input (ignoring whitespace), or a malformed tag resolves to a wrong beat.
+  if (tokens.join("") !== src.replace(/\s+/g, "")) return null;
   let i = 0;
   let ok = true;
   const peek = (): string | undefined => tokens[i];
@@ -237,12 +241,18 @@ export const buildClips = (
   // Sort by beat so gaps are computed against the next clip on the timeline.
   const sorted = [...timed].sort((a, b) => a.beat - b.beat);
   const clips: ClipPlan[] = [];
+  // Clips can't overlap on an arrangement track — a later clip trims/overwrites
+  // an earlier one — so when two lines resolve to the same (or too-close) beat,
+  // start the later clip where the previous one ends rather than on top of it.
+  let prevEnd = -Infinity;
   for (let i = 0; i < sorted.length; i++) {
     const cur = sorted[i];
     if (!cur) continue;
     const next = sorted[i + 1];
-    const duration = next ? Math.max(next.beat - cur.beat, min) : tail;
-    clips.push({ startTime: cur.beat, duration, name: cur.name });
+    const startTime = Math.max(cur.beat, prevEnd);
+    const duration = next ? Math.max(next.beat - startTime, min) : tail;
+    clips.push({ startTime, duration, name: cur.name });
+    prevEnd = startTime + duration;
   }
   return clips;
 };
@@ -259,8 +269,11 @@ export const placeWithoutCollision = (
   occupied: number[] = [],
   opts: { epsilon?: number; tolerance?: number } = {},
 ): number[] => {
-  const eps = opts.epsilon && opts.epsilon > 0 ? opts.epsilon : NUDGE_BEATS;
   const tol = opts.tolerance && opts.tolerance > 0 ? opts.tolerance : 1e-6;
+  const rawEps = opts.epsilon && opts.epsilon > 0 ? opts.epsilon : NUDGE_BEATS;
+  // The nudge must clear the tolerance window, or a too-small epsilon can never
+  // escape an occupied slot and the while-loop below spins forever.
+  const eps = Math.max(rawEps, tol * 2);
   const taken = occupied.slice();
   const isTaken = (b: number) => taken.some((t) => Math.abs(t - b) < tol);
   const out: number[] = [];

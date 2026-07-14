@@ -259,30 +259,38 @@ export function activate(activation: ActivationContext) {
             /* naming is best-effort */
           }
         }
-        // Replace atomically: clearing the old clips and creating the new ones go
-        // in ONE transaction (one undo step) and the delete finishes before the
-        // create begins, so a failure can't leave the track wiped-but-empty and
-        // an overlapping new clip can't race a not-yet-deleted old one.
+        // withinTransaction only groups operations FIRED synchronously inside its
+        // callback into one undo step — awaiting inside splits later work into
+        // separate steps. So fire all deletes and creates together (they stay in
+        // order on the message queue, so old clips clear before the new ones land)
+        // as one transaction, then name the created clips in a second transaction
+        // (naming needs the handle, which only exists once the create resolves).
+        // Result: two undo steps (structure, then names) instead of one-per-clip.
         const existing = arr(track.arrangementClips);
         const plan = buildClips(lines, tOpts);
-        await context.withinTransaction(() =>
-          Promise.all(
-            existing.map((c: any) =>
-              track.deleteClip(c).catch((e: any) => dbg("deleteClip failed", String(e))),
+        const made: any[] = await context.withinTransaction(() =>
+          Promise.all([
+            ...existing.map((c: any) =>
+              track.deleteClip(c).catch((e: any) => (dbg("deleteClip failed", String(e)), null)),
             ),
-          ).then(() =>
-            Promise.all(
-              plan.map(async (c) => {
-                try {
-                  const clip: any = await track.createMidiClip(c.startTime, c.duration);
-                  clip.name = c.name;
-                } catch (e) {
-                  dbg("createMidiClip failed", String(e));
-                }
-              }),
+            ...plan.map((c) =>
+              track
+                .createMidiClip(c.startTime, c.duration)
+                .then((clip: any) => ({ clip, name: c.name }))
+                .catch((e: any) => (dbg("createMidiClip failed", String(e)), null)),
             ),
-          ),
+          ]),
         );
+        context.withinTransaction(() => {
+          for (const m of made) {
+            if (m && m.clip)
+              try {
+                m.clip.name = m.name;
+              } catch {
+                /* naming is best-effort */
+              }
+          }
+        });
       } else {
         // Take a single snapshot of the cue points and split it: OURS (name-
         // prefixed, to be cleared) and everything else (the user's own markers,
@@ -313,26 +321,33 @@ export function activate(activation: ActivationContext) {
           .filter((t: number | null): t is number => t != null);
         const plan = buildLocators(lines, tOpts);
         const times = placeWithoutCollision(plan.map((p) => p.time), occupied);
-        // Replace atomically: clear ours, then create the new ones, in ONE
-        // transaction (one undo step); the delete completes before the create.
-        await context.withinTransaction(() =>
-          Promise.all(
-            mine.map((cp: any) =>
-              song.deleteCuePoint(cp).catch((e: any) => dbg("deleteCuePoint failed", String(e))),
+        // Same two-transaction shape as clips (see the clips branch): fire the
+        // deletes and creates together as one undo step — queued in order, so ours
+        // clear before the new ones are created at the same freed beats — then name
+        // the created cue points in a second batched transaction.
+        const made: any[] = await context.withinTransaction(() =>
+          Promise.all([
+            ...mine.map((cp: any) =>
+              song.deleteCuePoint(cp).catch((e: any) => (dbg("deleteCuePoint failed", String(e)), null)),
             ),
-          ).then(() =>
-            Promise.all(
-              plan.map(async (p, i) => {
-                try {
-                  const cue: any = await song.createCuePoint(times[i] ?? p.time);
-                  cue.name = LYRIC_MARK + p.name;
-                } catch (e) {
-                  dbg("createCuePoint failed", String(e));
-                }
-              }),
+            ...plan.map((p, i) =>
+              song
+                .createCuePoint(times[i] ?? p.time)
+                .then((cue: any) => ({ cue, name: LYRIC_MARK + p.name }))
+                .catch((e: any) => (dbg("createCuePoint failed", String(e)), null)),
             ),
-          ),
+          ]),
         );
+        context.withinTransaction(() => {
+          for (const m of made) {
+            if (m && m.cue)
+              try {
+                m.cue.name = m.name;
+              } catch {
+                /* naming is best-effort */
+              }
+          }
+        });
       }
     } catch (e) {
       dbg("sendLyricsToTimeline failed", String(e));

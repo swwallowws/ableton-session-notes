@@ -185,18 +185,22 @@
       button.icon svg { display: block; }
       /* Floating corner controls — dim over the text, light up on hover so they
          don't fight the writing area. Size top-left, timeline top-right. */
-      /* button.corner (specificity 0,1,1) so it beats [data-tip]{position:relative}. */
+      /* Floating corner controls — solid, clearly-contained buttons lifted off the
+         text with a shadow. button.corner (specificity 0,1,1) beats the generic
+         [data-tip]{position:relative} rule. The note area has a top gutter so they
+         never overlap the writing. */
       button.corner {
-        position: fixed; top: 8px; z-index: 15; width: 24px; height: 24px; padding: 0;
+        position: fixed; top: 9px; z-index: 15; width: 27px; height: 27px; padding: 0;
         display: inline-flex; align-items: center; justify-content: center;
-        color: var(--muted); background: rgba(46, 49, 55, 0.55);
-        border: 1px solid var(--line); border-radius: 5px; cursor: pointer;
-        opacity: 0.45; transition: opacity 0.12s, color 0.12s, background 0.12s;
+        color: var(--text); background: var(--field);
+        border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+        transition: color 0.12s, background 0.12s;
       }
-      .corner:hover { opacity: 1; color: var(--text); background: var(--field); }
-      .corner svg { display: block; }
-      .corner.tl { left: 8px; }
-      .corner.tr { right: 8px; }
+      button.corner:hover { background: var(--field-hover); color: var(--accent); }
+      .corner svg { display: block; width: 15px; height: 15px; }
+      .corner.tl { left: 9px; }
+      .corner.tr { right: 9px; }
       .corner[hidden] { display: none; }
       /* instant custom tooltip (native title has a ~1s delay we can't change) */
       [data-tip] { position: relative; }
@@ -603,7 +607,7 @@
         const n = tlLines.length;
         tltext.textContent = n
           ? "Send " + n + (n === 1 ? " line" : " lines") +
-            " to the arrangement — tag a line with [17] or [1:04] to place it (see ?):"
+            " to the timeline (see ? for timing tags):"
           : "No lyric lines in this note to send.";
         document.getElementById("tlloc").disabled = !n;
         document.getElementById("tlclip").disabled = !n;

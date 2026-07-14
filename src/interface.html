@@ -302,6 +302,18 @@
       // Compact layout tweaks (e.g. hiding the word count) key off this class.
       document.body.classList.toggle("small", ((STATE && STATE.size) || "m") === "s");
 
+      // Shortcut labels: the bindings use ⌘ OR Ctrl (metaKey || ctrlKey), but the
+      // text hints must match the OS. The host tells us via STATE.mac; default to
+      // Mac if unknown. K() rewrites the ⌘ glyphs in a string for Windows.
+      const MAC = !(STATE && STATE.mac === false);
+      const WINMAP = [["⌘+ / ⌘− / ⌘0", "Ctrl +/− and Ctrl 0"], ["⌘+ / ⌘−", "Ctrl +/−"], ["⌘E", "Ctrl+E"], ["⌘S", "Ctrl+S"], ["⌘", "Ctrl"]];
+      function K(s) { if (MAC || !s) return s; let r = s; for (const p of WINMAP) r = r.split(p[0]).join(p[1]); return r; }
+      if (!MAC) {
+        document.querySelectorAll("[data-tip]").forEach((el) => { if (el.dataset.tip) el.dataset.tip = K(el.dataset.tip); });
+        document.querySelectorAll("[aria-label]").forEach((el) => { const a = el.getAttribute("aria-label"); if (a) el.setAttribute("aria-label", K(a)); });
+        const hc = document.querySelector(".help-card"); if (hc) hc.innerHTML = K(hc.innerHTML);
+      }
+
       const pad = document.getElementById("pad");
       const preview = document.getElementById("preview");
       const count = document.getElementById("count");
@@ -565,12 +577,12 @@
         editing = edit;
         if (edit) {
           pad.style.display = "block"; preview.style.display = "none";
-          modeBtn.innerHTML = ICON_PREVIEW; modeBtn.dataset.tip = "View (⌘E)";
+          modeBtn.innerHTML = ICON_PREVIEW; modeBtn.dataset.tip = K("View (⌘E)");
           pad.focus(); pad.setSelectionRange(pad.value.length, pad.value.length);
         } else {
           renderPreview();
           pad.style.display = "none"; preview.style.display = "block";
-          modeBtn.innerHTML = ICON_EDIT; modeBtn.dataset.tip = "Edit (⌘E)";
+          modeBtn.innerHTML = ICON_EDIT; modeBtn.dataset.tip = K("Edit (⌘E)");
         }
         refreshCount();
       }
@@ -629,7 +641,7 @@
       }
       function applyZoom() {
         document.documentElement.style.setProperty("--note-font", notePx + "px");
-        zoomBtn.dataset.tip = "Text size " + (zoomIndex() + 1) + "/" + ZOOM_LEVELS.length + " (⌘+ / ⌘−)";
+        zoomBtn.dataset.tip = K("Text size " + (zoomIndex() + 1) + "/" + ZOOM_LEVELS.length + " (⌘+ / ⌘−)");
       }
       function setZoomIndex(i) { notePx = ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, i))]; applyZoom(); }
       function stepZoom(dir) { setZoomIndex(zoomIndex() + dir); }
@@ -664,13 +676,20 @@
         tltext.textContent = n
           ? "Send " + n + (n === 1 ? " line" : " lines") +
             " to the timeline (see ? for timing tags):"
-          : "No tagged lyrics — tag a line with a position like [1] (see ?).";
+          : "No tagged lyrics yet. Add a position like [1] to a line (see ?).";
         document.getElementById("tlloc").disabled = !n;
         document.getElementById("tlclip").disabled = !n;
         tlbar.hidden = false;
       }
       document.getElementById("cornerTimeline").addEventListener("click", openTimelineBar);
       document.getElementById("tlno").addEventListener("click", () => { tlbar.hidden = true; });
+      // The bar is just a prompt over the still-editable note — so any move back to
+      // the note (typing, or clicking into it) dismisses it instead of leaving it
+      // stuck until Cancel/Send. Re-open it from the timeline button when ready.
+      const dismissTlbar = () => { if (!tlbar.hidden) tlbar.hidden = true; };
+      pad.addEventListener("input", dismissTlbar);
+      pad.addEventListener("focus", dismissTlbar);
+      preview.addEventListener("mousedown", dismissTlbar);
       const sendTimeline = (mode) => {
         // Re-extract at click time: the pad stays editable behind this bar, so
         // lines added/changed after it opened must still be picked up.

@@ -253,6 +253,7 @@ export const buildState = (
     globalNotes,
     size: saved.size || "m",
     zoom: saved.zoom || 0, // 0 = default; interface.html resolves to a px size
+    mac: process.platform === "darwin", // drives ⌘-vs-Ctrl shortcut labels
     migration: offer,
     current,
   };

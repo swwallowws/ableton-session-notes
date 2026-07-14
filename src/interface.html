@@ -35,14 +35,14 @@
         display: block; width: 100%; height: 100%;
         resize: none; background: transparent; color: var(--text);
         caret-color: var(--accent); border: 0; outline: 0;
-        padding: 14px 16px;
+        padding: 36px 16px 14px;   /* top gutter clears the floating corner buttons */
         font: 13px/1.7 ui-monospace, "SF Mono", Menlo, monospace;
       }
       textarea::placeholder { color: var(--muted); }
       textarea::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
       .md ::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
 
-      .md { padding: 14px 16px; font-size: 13px; line-height: 1.7; cursor: text; }
+      .md { padding: 36px 16px 14px; font-size: 13px; line-height: 1.7; cursor: text; }
       #preview { min-height: 100%; }   /* fill the view so the whole empty note is clickable */
       .md:empty::before { content: "Click here to start writing…"; color: var(--muted); }
       .md h1, .md h2, .md h3 { font-weight: 600; line-height: 1.3; margin: 14px 0 6px; }
@@ -183,6 +183,21 @@
       button.icon.on { color: var(--accent); background: var(--field); }
       button.icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; }
       button.icon svg { display: block; }
+      /* Floating corner controls — dim over the text, light up on hover so they
+         don't fight the writing area. Size top-left, timeline top-right. */
+      /* button.corner (specificity 0,1,1) so it beats [data-tip]{position:relative}. */
+      button.corner {
+        position: fixed; top: 8px; z-index: 15; width: 24px; height: 24px; padding: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        color: var(--muted); background: rgba(46, 49, 55, 0.55);
+        border: 1px solid var(--line); border-radius: 5px; cursor: pointer;
+        opacity: 0.45; transition: opacity 0.12s, color 0.12s, background 0.12s;
+      }
+      .corner:hover { opacity: 1; color: var(--text); background: var(--field); }
+      .corner svg { display: block; }
+      .corner.tl { left: 8px; }
+      .corner.tr { right: 8px; }
+      .corner[hidden] { display: none; }
       /* instant custom tooltip (native title has a ~1s delay we can't change) */
       [data-tip] { position: relative; }
       [data-tip]:hover::after {
@@ -197,6 +212,8 @@
     </style>
   </head>
   <body>
+    <button id="cornerSize" class="corner tl tip-left" data-tip="Resize" aria-label="Resize pad"></button>
+    <button id="cornerTimeline" class="corner tr tip-right" data-tip="Send lyrics to timeline" aria-label="Send lyrics to arrangement timeline"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 H15" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.4 V10.6 M8 5.4 V10.6 M12 5.4 V10.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
     <div class="view">
       <div class="md" id="preview"></div>
       <textarea id="pad" placeholder="Capture lyrics, ideas and to-dos…" spellcheck="true"></textarea>
@@ -239,7 +256,6 @@
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
           <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
           <button id="helpBtn" class="icon ghost tip-left" data-tip="Help & lyric timing" aria-label="Help and lyric timing">?</button>
-          <button id="sizeToggle" class="icon ghost tip-left" data-tip="Resize" aria-label="Resize pad"></button>
         </span>
       </div>
       <div class="actions">
@@ -344,11 +360,6 @@
         renameOpt = new Option("Rename note…", "__rename__");
         nbSelect.appendChild(renameOpt);
         nbSelect.appendChild(new Option("Delete note…", "__delete__"));
-        // Second group: send this note's lyric lines to the arrangement.
-        const sep2 = new Option("──────────", "__sep2__");
-        sep2.disabled = true;
-        nbSelect.appendChild(sep2);
-        nbSelect.appendChild(new Option("Send lyrics to timeline…", "__timeline__"));
         nbSelect.value = current;
         nbSelect.dataset.tip = folderFor(current);
       }
@@ -440,7 +451,6 @@
         else if (v === "__newnb__") { createNote("g"); enterRenameMode(); }
         else if (v === "__rename__") { nbSelect.value = current; enterRenameMode(); }
         else if (v === "__delete__") { nbSelect.value = current; askDelete(); }
-        else if (v === "__timeline__") { nbSelect.value = current; openTimelineBar(); }
         else selectValue(v);
       });
       newNb.addEventListener("blur", () => { if (nbMode) commitNbInput(); });
@@ -545,7 +555,7 @@
       // it at the other size. The icon shows which way it'll go. ----
       const ICON_GROW = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2 H14 V6.5 M14 2 L9.3 6.7 M6.5 14 H2 V9.5 M2 14 L6.7 9.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       const ICON_SHRINK = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 3 L8.8 7.2 M8.8 3.2 V7.2 H12.8 M3 13 L7.2 8.8 M7.2 12.8 V8.8 H3.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      const sizeToggle = document.getElementById("sizeToggle");
+      const sizeToggle = document.getElementById("cornerSize");
       const curSize = (STATE && STATE.size) || "m";
       const bigger = curSize !== "m";   // if compact, next tap grows; else shrinks
       sizeToggle.innerHTML = bigger ? ICON_GROW : ICON_SHRINK;
@@ -586,7 +596,7 @@
       const tltext = document.getElementById("tltext");
       let tlLines = [];
       let pendingTimeline = null;   // {lines, mode} attached to the "timeline" post
-      // Opened from the note menu ("Send lyrics to timeline…").
+      // Opened from the top-right corner button.
       function openTimelineBar() {
         contents[current] = pad.value;                 // capture latest edits
         tlLines = extractLyricLinesJS(pad.value);
@@ -599,6 +609,7 @@
         document.getElementById("tlclip").disabled = !n;
         tlbar.hidden = false;
       }
+      document.getElementById("cornerTimeline").addEventListener("click", openTimelineBar);
       document.getElementById("tlno").addEventListener("click", () => { tlbar.hidden = true; });
       const sendTimeline = (mode) => {
         if (!tlLines.length) { tlbar.hidden = true; return; }

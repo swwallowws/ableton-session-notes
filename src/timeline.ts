@@ -11,18 +11,51 @@
 // horizontal rules, the seeded ♪ placeholder, and strip a leading list/checkbox
 // marker so "- [ ] word" or "* word" becomes "word". Everything else counts as a
 // lyric line.
+// Does a line carry a leading [tag] SHAPED like a position tag — musical
+// (`[17]`, `[17.3]`), clock (`[1:04]`), or expression (`[=8*4]`)? This is
+// bpm-independent on purpose: it asks "does this line use the timing notation",
+// not "does it resolve to a beat", so the webview (which doesn't know the tempo)
+// and the host agree on which lines are lyrics. `[verse]` and prose don't match.
+export const POSITION_TAG = /^\[(?:=[^\]]+|\d+(?:\.\d+){0,2}|\d+:\d{1,2}(?:\.\d+)?)\]/;
+export const hasPositionTag = (line: string): boolean => POSITION_TAG.test(line.trim());
+
+// Reduce a raw note line to its lyric text, or null if it can never be a lyric
+// (blank, heading, rule, or the seeded ♪). Strips a leading bullet/checkbox.
+const cleanLyricLine = (raw: string): string | null => {
+  let line = raw.trim();
+  if (!line) return null;
+  if (/^#{1,6}\s/.test(line)) return null; // heading
+  if (/^(---|\*\*\*|___)$/.test(line)) return null; // horizontal rule
+  if (line === "♪") return null; // seeded LYRICS placeholder
+  line = line.replace(/^[-*+]\s+(\[[ xX]?\]\s*)?/, "").trim(); // leading bullet / checkbox
+  return line || null;
+};
+
+// Pull the lyric lines out of a note. Two modes:
+//   • No position tags anywhere → the whole note is a lyric sheet (every line is
+//     a lyric), so people who just type lyrics and hit send still get them all.
+//   • Any position tag present → "tagged blocks": a tagged line starts a lyric
+//     block, untagged lines directly beneath it flow as lyrics, and a blank line
+//     or heading ends the block. Prose outside a block is ignored — so you can
+//     mix notes, to-dos and lyrics in one file.
 export const extractLyricLines = (md: string): string[] => {
+  const cleaned = (md || "").replace(/\r\n?/g, "\n").split("\n").map(cleanLyricLine);
+  const present = cleaned.filter((l): l is string => l != null);
+  if (!present.some(hasPositionTag)) return present; // whole-note mode
   const out: string[] = [];
-  for (const raw of (md || "").replace(/\r\n?/g, "\n").split("\n")) {
-    let line = raw.trim();
-    if (!line) continue;
-    if (/^#{1,6}\s/.test(line)) continue; // heading
-    if (/^(---|\*\*\*|___)$/.test(line)) continue; // horizontal rule
-    if (line === "♪") continue; // seeded LYRICS placeholder
-    line = line.replace(/^[-*+]\s+(\[[ xX]?\]\s*)?/, ""); // leading bullet / checkbox
-    line = line.trim();
-    if (!line) continue;
-    out.push(line);
+  let inBlock = false;
+  for (const line of cleaned) {
+    if (line == null) {
+      inBlock = false; // a blank line or heading ends the current block
+      continue;
+    }
+    if (hasPositionTag(line)) {
+      inBlock = true;
+      out.push(line);
+    } else if (inBlock) {
+      out.push(line);
+    }
+    // else: prose outside any block → skip
   }
   return out;
 };

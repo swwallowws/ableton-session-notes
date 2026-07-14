@@ -32,7 +32,7 @@ const test = (name: string, fn: () => void) => {
 
 console.log("timeline.ts");
 
-test("extractLyricLines keeps singable lines, drops structure", () => {
+test("extractLyricLines (no tags) keeps every singable line, drops structure", () => {
   const md = "# LYRICS\nWalking in the rain\n- [ ] a todo\n- bullet line\n\n♪\n---\nWith you tonight";
   assert.deepEqual(extractLyricLines(md), [
     "Walking in the rain",
@@ -45,6 +45,30 @@ test("extractLyricLines keeps singable lines, drops structure", () => {
 test("extractLyricLines returns [] for empty / structure-only notes", () => {
   assert.deepEqual(extractLyricLines(""), []);
   assert.deepEqual(extractLyricLines("# TO-DO\n\n♪\n---"), []);
+});
+
+test("extractLyricLines (tagged blocks): a tagged line starts a block, untagged lines flow", () => {
+  const md = "# Ideas\nfix the bridge\n\n[1] Walking in the rain\nwith you tonight\n[5] Under the neon light\n\n- [ ] mix down vocals";
+  // "fix the bridge" and the to-do are prose (outside a block); the three lyric
+  // lines — including the untagged flow line — are kept, tags intact.
+  assert.deepEqual(extractLyricLines(md), [
+    "[1] Walking in the rain",
+    "with you tonight",
+    "[5] Under the neon light",
+  ]);
+});
+
+test("extractLyricLines (tagged blocks): a blank line ends a block", () => {
+  const md = "[1] first\nflow one\n\nprose after the blank\n[9] second";
+  assert.deepEqual(extractLyricLines(md), ["[1] first", "flow one", "[9] second"]);
+});
+
+test("extractLyricLines: clock/expression tags also start a block", () => {
+  assert.deepEqual(extractLyricLines("note\n[1:04] clocked\nflow"), ["[1:04] clocked", "flow"]);
+  assert.deepEqual(extractLyricLines("note\n[=8*4] mathy\nflow"), ["[=8*4] mathy", "flow"]);
+  // A non-position bracket like [verse] does NOT start a block: with a real tag
+  // present, [verse] stays prose while [1] opens the block.
+  assert.deepEqual(extractLyricLines("[verse] words\n\n[1] real lyric"), ["[1] real lyric"]);
 });
 
 test("planLocators spaces one bar apart by default", () => {

@@ -36,13 +36,13 @@
         resize: none; background: transparent; color: var(--text);
         caret-color: var(--accent); border: 0; outline: 0;
         padding: 14px 16px;
-        font: 13px/1.7 ui-monospace, "SF Mono", Menlo, monospace;
+        font: var(--note-font, 13px)/1.7 ui-monospace, "SF Mono", Menlo, monospace;
       }
       textarea::placeholder { color: var(--muted); }
       textarea::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
       .md ::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
 
-      .md { padding: 14px 16px; font-size: 13px; line-height: 1.7; cursor: text; }
+      .md { padding: 14px 16px; font-size: var(--note-font, 13px); line-height: 1.7; cursor: text; }
       #preview { min-height: 100%; }   /* fill the view so the whole empty note is clickable */
       .md:empty::before { content: "Click here to start writing…"; color: var(--muted); }
       .md h1, .md h2, .md h3 { font-weight: 600; line-height: 1.3; margin: 14px 0 6px; }
@@ -254,6 +254,7 @@
           <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
           <button id="cornerTimeline" class="icon ghost tip-left" data-tip="Send lyrics to timeline" aria-label="Send lyrics to arrangement timeline"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 H15" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.4 V10.6 M8 5.4 V10.6 M12 5.4 V10.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
           <button id="cornerSize" class="icon ghost tip-left" data-tip="Resize" aria-label="Resize pad"></button>
+          <button id="zoomBtn" class="icon ghost tip-left" data-tip="Text size" aria-label="Text size (⌘+ / ⌘−)"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><text x="1.5" y="9" font-size="8" font-weight="600" fill="currentColor">A</text><text x="8.5" y="12.5" font-size="6" font-weight="600" fill="currentColor">A</text></svg></button>
           <button id="helpBtn" class="icon ghost tip-left" data-tip="Help & lyric timing" aria-label="Help and lyric timing">?</button>
         </span>
       </div>
@@ -270,7 +271,7 @@
           <strong>Markdown &amp; lyric timing</strong>
           <button id="helpClose" class="icon ghost" aria-label="Close help">✕</button>
         </div>
-        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View.</p>
+        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View. Change the text size with the <b>A</b> button or <b>⌘+ / ⌘− / ⌘0</b>.</p>
         <table class="help-cheat">
           <thead><tr><th>type this</th><th>see this</th></tr></thead>
           <tbody id="cheatBody"></tbody>
@@ -278,7 +279,7 @@
 
         <div class="help-sec">
           <strong>Put lyrics on the timeline</strong>
-          <p class="help-how">Give a lyric line a position tag, then click the <b>timeline button</b> in the toolbar (the ticked-line icon) to drop a <b>locator</b> or a <b>clip</b> per line. A tagged line starts a <b>lyric block</b>; plain lines right below it flow one bar apart, and a blank line ends the block — so anything outside a block stays as ordinary notes and you can keep lyrics, ideas and to-dos in one file. In <b>View</b>, each lyric line shows its landing spot as a chip. (A note with no tags at all is treated as all-lyrics.)</p>
+          <p class="help-how">Give a lyric line a position tag, then click the <b>timeline button</b> in the toolbar (the ticked-line icon) to drop a <b>locator</b> or a <b>clip</b> per line. A tagged line starts a <b>lyric block</b>; plain lines right below it flow one bar apart, and a blank line ends the block — so anything outside a block stays as ordinary notes and you can keep lyrics, ideas and to-dos in one file. In <b>View</b>, each lyric line shows its landing spot as a chip (a flow line shows <b>↳</b>). Tag at least one line — a note with no tags sends nothing.</p>
           <table class="help-cheat">
             <thead><tr><th>tag a line</th><th>lands it at</th></tr></thead>
             <tbody>
@@ -487,16 +488,11 @@
       }
       // Aligned to the note's lines: each entry is null (not a lyric) or
       // { text, tag } — tag is the raw position tag ("17", "1:04", "=8*4"), or ""
-      // for an untagged flow line. No tags anywhere → the whole note is lyrics.
+      // for an untagged flow line. A tagged line opens a block; untagged lines
+      // beneath it flow; a blank line or heading closes it. No tags → no lyrics.
       function classifyLyrics(md) {
         const cleaned = (md || "").replace(/\r\n?/g, "\n").split("\n").map(cleanLyricLineJS);
         const out = cleaned.map(() => null);
-        const anyTag = cleaned.some((l) => l != null && POSITION_TAG.test(l));
-        if (!anyTag) {
-          for (let i = 0; i < cleaned.length; i++)
-            if (cleaned[i] != null) out[i] = { text: cleaned[i], tag: "" };
-          return out;
-        }
         let inBlock = false;
         for (let i = 0; i < cleaned.length; i++) {
           const line = cleaned[i];
@@ -510,7 +506,7 @@
       function extractLyricLinesJS(md) { return classifyLyrics(md).filter(Boolean).map((x) => x.text); }
       // Humanise a position tag for the in-View chip.
       function tagLabel(tag) {
-        if (!tag) return "♪";                       // flow line — inherits position
+        if (!tag) return "↳";                       // flow line — inherits position
         if (tag.charAt(0) === "=") return tag;      // expression
         if (tag.indexOf(":") !== -1) return tag;    // clock m:ss
         return "bar " + tag;                        // musical
@@ -619,6 +615,27 @@
       sizeToggle.dataset.tip = bigger ? "Larger" : "Smaller";
       sizeToggle.addEventListener("click", () => post("resize", bigger ? "m" : "s"));
 
+      // ---- note text size (zoom). Unlike the window size, this applies live in
+      // the webview (a CSS var) — no reopen needed — and rides along in the post
+      // payload so the host persists it. Click cycles up (wrapping); ⌘+ / ⌘− step,
+      // ⌘0 resets. ----
+      const ZOOM_LEVELS = [11, 12, 13, 15, 17, 20], ZOOM_DEFAULT = 13;
+      let notePx = (STATE && STATE.zoom) || ZOOM_DEFAULT;   // 0 / undefined → default
+      const zoomBtn = document.getElementById("zoomBtn");
+      function zoomIndex() {
+        let i = ZOOM_LEVELS.indexOf(notePx);
+        if (i < 0) { let best = Infinity; for (let k = 0; k < ZOOM_LEVELS.length; k++) { const d = Math.abs(ZOOM_LEVELS[k] - notePx); if (d < best) { best = d; i = k; } } }
+        return i < 0 ? 0 : i;
+      }
+      function applyZoom() {
+        document.documentElement.style.setProperty("--note-font", notePx + "px");
+        zoomBtn.dataset.tip = "Text size " + (zoomIndex() + 1) + "/" + ZOOM_LEVELS.length + " (⌘+ / ⌘−)";
+      }
+      function setZoomIndex(i) { notePx = ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, i))]; applyZoom(); }
+      function stepZoom(dir) { setZoomIndex(zoomIndex() + dir); }
+      zoomBtn.addEventListener("click", () => setZoomIndex((zoomIndex() + 1) % ZOOM_LEVELS.length));
+      applyZoom();
+
       // ---- "bring notes from another project" offer (after a Save As) ----
       let dismissedMigration = false;
       const migrate = document.getElementById("migrate");
@@ -639,7 +656,7 @@
       const tltext = document.getElementById("tltext");
       let tlLines = [];
       let pendingTimeline = null;   // {lines, mode} attached to the "timeline" post
-      // Opened from the top-right corner button.
+      // Opened from the timeline toolbar button.
       function openTimelineBar() {
         contents[current] = pad.value;                 // capture latest edits
         tlLines = extractLyricLinesJS(pad.value);
@@ -647,7 +664,7 @@
         tltext.textContent = n
           ? "Send " + n + (n === 1 ? " line" : " lines") +
             " to the timeline (see ? for timing tags):"
-          : "No lyric lines in this note to send.";
+          : "No tagged lyrics — tag a line with a position like [1] (see ?).";
         document.getElementById("tlloc").disabled = !n;
         document.getElementById("tlclip").disabled = !n;
         tlbar.hidden = false;
@@ -735,7 +752,7 @@
         // Don't delete a name we're also writing (a note recreated with that name).
         const dels = (set, map) => [...set].filter((nm) => !(nm in map));
         const payload = {
-          action: action, current: current, size: size || (STATE && STATE.size) || "m",
+          action: action, current: current, size: size || (STATE && STATE.size) || "m", zoom: notePx,
           dismissMigration: dismissedMigration,
           projectMap: projectMap, globalMap: globalMap,
           projectRenames: projectRenames, globalRenames: globalRenames,
@@ -818,7 +835,11 @@
           else post("save");             // View → save & close
           return;
         }
-        if (mod && k === "e") { e.preventDefault(); setMode(!editing); }
+        if (mod && k === "e") { e.preventDefault(); setMode(!editing); return; }
+        // Text zoom: ⌘+ / ⌘= to grow, ⌘- to shrink, ⌘0 to reset.
+        if (mod && (k === "=" || k === "+")) { e.preventDefault(); stepZoom(1); return; }
+        if (mod && (k === "-" || k === "_")) { e.preventDefault(); stepZoom(-1); return; }
+        if (mod && k === "0") { e.preventDefault(); setZoomIndex(ZOOM_LEVELS.indexOf(ZOOM_DEFAULT)); return; }
       });
       window.addEventListener("beforeunload", () => post("save")); // save if closed another way
     </script>

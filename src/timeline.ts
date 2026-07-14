@@ -31,17 +31,13 @@ const cleanLyricLine = (raw: string): string | null => {
   return line || null;
 };
 
-// Pull the lyric lines out of a note. Two modes:
-//   • No position tags anywhere → the whole note is a lyric sheet (every line is
-//     a lyric), so people who just type lyrics and hit send still get them all.
-//   • Any position tag present → "tagged blocks": a tagged line starts a lyric
-//     block, untagged lines directly beneath it flow as lyrics, and a blank line
-//     or heading ends the block. Prose outside a block is ignored — so you can
-//     mix notes, to-dos and lyrics in one file.
+// Pull the lyric lines out of a note using "tagged blocks": a line with a
+// position tag starts a lyric block, untagged lines directly beneath it flow as
+// lyrics, and a blank line or heading ends the block. Prose outside a block is
+// ignored — so lyrics, notes and to-dos can live in one file. A note with no
+// position tags yields no lyrics (tag at least one line; the rest flow from it).
 export const extractLyricLines = (md: string): string[] => {
   const cleaned = (md || "").replace(/\r\n?/g, "\n").split("\n").map(cleanLyricLine);
-  const present = cleaned.filter((l): l is string => l != null);
-  if (!present.some(hasPositionTag)) return present; // whole-note mode
   const out: string[] = [];
   let inBlock = false;
   for (const line of cleaned) {

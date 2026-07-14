@@ -32,19 +32,23 @@ const test = (name: string, fn: () => void) => {
 
 console.log("timeline.ts");
 
-test("extractLyricLines (no tags) keeps every singable line, drops structure", () => {
-  const md = "# LYRICS\nWalking in the rain\n- [ ] a todo\n- bullet line\n\n♪\n---\nWith you tonight";
-  assert.deepEqual(extractLyricLines(md), [
-    "Walking in the rain",
-    "a todo",
-    "bullet line",
-    "With you tonight",
-  ]);
+test("extractLyricLines: a note with no position tags yields no lyrics", () => {
+  // Tagging is required now — an untagged note is treated as ordinary prose.
+  assert.deepEqual(extractLyricLines("Walking in the rain\nWith you tonight"), []);
 });
 
 test("extractLyricLines returns [] for empty / structure-only notes", () => {
   assert.deepEqual(extractLyricLines(""), []);
   assert.deepEqual(extractLyricLines("# TO-DO\n\n♪\n---"), []);
+});
+
+test("extractLyricLines: one tag at the top pulls the whole block (rest flow)", () => {
+  const md = "[1] Walking in the rain\nWith you tonight\nunder the light";
+  assert.deepEqual(extractLyricLines(md), [
+    "[1] Walking in the rain",
+    "With you tonight",
+    "under the light",
+  ]);
 });
 
 test("extractLyricLines (tagged blocks): a tagged line starts a block, untagged lines flow", () => {

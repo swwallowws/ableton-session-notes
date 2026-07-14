@@ -8,6 +8,7 @@ import * as path from "node:path";
 export type SavedState = {
   current?: string;
   size?: string;
+  zoom?: number; // note text size in px (see interface.html ZOOM_LEVELS)
   lastProject?: { path: string; name: string }; // most recent project with notes
   dismissed?: string[]; // project roots where the "bring notes" offer was declined
 };
@@ -18,6 +19,7 @@ export type Payload = {
   lines?: string[]; // lyric lines to place on the arrangement (action "timeline")
   timelineMode?: string; // "locators" | "clips" (action "timeline")
   size?: string;
+  zoom?: number; // note text size in px
   dismissMigration?: boolean; // user declined the "bring notes" offer
   projectMap?: Record<string, string>;
   globalMap?: Record<string, string>;
@@ -250,6 +252,7 @@ export const buildState = (
     projectNotes,
     globalNotes,
     size: saved.size || "m",
+    zoom: saved.zoom || 0, // 0 = default; interface.html resolves to a px size
     migration: offer,
     current,
   };

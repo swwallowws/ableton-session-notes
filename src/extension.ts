@@ -321,22 +321,28 @@ export function activate(activation: ActivationContext) {
           .filter((t: number | null): t is number => t != null);
         const plan = buildLocators(lines, tOpts);
         const times = placeWithoutCollision(plan.map((p) => p.time), occupied);
-        // Same two-transaction shape as clips (see the clips branch): fire the
-        // deletes and creates together as one undo step — queued in order, so ours
-        // clear before the new ones are created at the same freed beats — then name
-        // the created cue points in a second batched transaction.
-        const made: any[] = await context.withinTransaction(() =>
-          Promise.all([
-            ...mine.map((cp: any) =>
-              song.deleteCuePoint(cp).catch((e: any) => (dbg("deleteCuePoint failed", String(e)), null)),
+        // Unlike clips, cue points CAN'T share a beat, so a new locator created at
+        // a beat one of ours is still occupying gets dropped. Fully clear ours
+        // FIRST (awaited), freeing those beats, before creating the new ones — this
+        // is what made re-sends flaky when both ran in one batch. Each phase is its
+        // own batched transaction (deletes, then creates, then names).
+        if (mine.length)
+          await context.withinTransaction(() =>
+            Promise.all(
+              mine.map((cp: any) =>
+                song.deleteCuePoint(cp).catch((e: any) => (dbg("deleteCuePoint failed", String(e)), null)),
+              ),
             ),
-            ...plan.map((p, i) =>
+          );
+        const made: any[] = await context.withinTransaction(() =>
+          Promise.all(
+            plan.map((p, i) =>
               song
                 .createCuePoint(times[i] ?? p.time)
                 .then((cue: any) => ({ cue, name: LYRIC_MARK + p.name }))
                 .catch((e: any) => (dbg("createCuePoint failed", String(e)), null)),
             ),
-          ]),
+          ),
         );
         context.withinTransaction(() => {
           for (const m of made) {
@@ -362,6 +368,7 @@ export function activate(activation: ActivationContext) {
   context.commands.registerCommand("notes.open", async () => {
     const root = await detectProjectRoot();
     let size = readState().size || "m";
+    let zoom = readState().zoom || 0; // note text size in px (0 = default)
     // True right after we ask for a resize/bring reopen. The SDK can briefly refuse
     // to open a new modal while the previous one is still tearing down, so in that
     // window we retry instead of silently leaving the pad closed.
@@ -384,6 +391,7 @@ export function activate(activation: ActivationContext) {
         { notebooksDir, saved: st, defaultMd: DEFAULT_MD },
       );
       state.size = size;
+      state.zoom = zoom;
       const html = interfaceHtml.replace("'__STATE__'", JSON.stringify(state));
       const url = `data:text/html,${encodeURIComponent(html)}`;
       const dim = SIZES[size] ?? { w: 640, h: 560 };
@@ -408,13 +416,14 @@ export function activate(activation: ActivationContext) {
       reopening = false;
       if (!payload) break;
       if (payload.size) size = payload.size;
+      if (typeof payload.zoom === "number") zoom = payload.zoom;
 
       // Bring notes from the last project, then reopen showing them. Edits made
       // on the placeholder note aren't persisted here — the offer only appears
       // on an empty project, so there's nothing worth keeping.
       if (payload.action === "bring" && offer && root) {
         const dest = bringNotes(projectNotesDir(offer.fromPath), projectNotesDir(root));
-        const next: SavedState = { ...st, size };
+        const next: SavedState = { ...st, size, zoom };
         if (dest) next.current = "p:" + dest;
         writeState(next);
         reopening = true;
@@ -433,7 +442,7 @@ export function activate(activation: ActivationContext) {
         const mode = payload.timelineMode === "clips" ? "clips" : "locators";
         await sendLyricsToTimeline(payload.lines ?? [], mode);
         const cur = payload.current || st.current;
-        writeState({ ...st, size, ...(cur ? { current: cur } : {}) });
+        writeState({ ...st, size, zoom, ...(cur ? { current: cur } : {}) });
         reopening = true;
         continue;
       }
@@ -458,7 +467,7 @@ export function activate(activation: ActivationContext) {
       if (root && listMd(projectNotesDir(root)).length > 0)
         sessionSource = { path: root, name: path.basename(root) };
 
-      const next: SavedState = { size, dismissed: [...dismissed] };
+      const next: SavedState = { size, zoom, dismissed: [...dismissed] };
       const cur = payload.current || st.current;
       if (cur) next.current = cur;
       writeState(next);

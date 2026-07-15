@@ -200,11 +200,17 @@
         height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
         background: var(--surface); flex: 0 0 auto; user-select: none;
       }
+      /* Zen Mode: hide the bottom toolbar for distraction-free writing (⇧⌘H).
+         Esc / ⌘S still save. */
+      body.zen .bar { display: none; }
       /* Note picker + tools on the left, actions on the right; space-between keeps
          a gap in the middle and respects the bar padding so Revert/Done stay clear
          of the edge. The fixed-width select keeps the left group from overflowing. */
       .left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; }
       .tools { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+      /* Meta tools (settings, help) sit in their own group, divided from the
+         per-note tools — mirroring the divider before Revert / Done. */
+      .tools-meta { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--line); }
       /* Flat, boxy controls with a subtle frame and clear hover — Live's style.
          Fixed width so the <select> doesn't balloon to its widest option. */
       .nb {
@@ -290,8 +296,10 @@
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
           <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
           <button id="cornerTimeline" class="icon ghost tip-left" data-tip="Send lyrics to timeline" aria-label="Send lyrics to arrangement timeline"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 H15" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.4 V10.6 M8 5.4 V10.6 M12 5.4 V10.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-          <button id="settingsBtn" class="icon ghost tip-left" data-tip="Settings" aria-label="Settings"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.4 V3 M8 13 V14.6 M1.4 8 H3 M13 8 H14.6 M3.3 3.3 L4.4 4.4 M11.6 11.6 L12.7 12.7 M12.7 3.3 L11.6 4.4 M4.4 11.6 L3.3 12.7" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-          <button id="helpBtn" class="icon ghost tip-left" data-tip="Help & lyric timing" aria-label="Help and lyric timing">?</button>
+          <span class="tools-meta">
+            <button id="settingsBtn" class="icon ghost tip-left" data-tip="Settings" aria-label="Settings"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5 H14 M2 8 H14 M2 11.5 H14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11" cy="4.5" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/><circle cx="5" cy="8" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/><circle cx="9" cy="11.5" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/></svg></button>
+            <button id="helpBtn" class="icon ghost tip-left" data-tip="Help & lyric timing" aria-label="Help and lyric timing">?</button>
+          </span>
         </span>
       </div>
       <div class="actions">
@@ -333,7 +341,7 @@
           <strong>Markdown &amp; lyric timing</strong>
           <button id="helpClose" class="icon ghost" aria-label="Close help">✕</button>
         </div>
-        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View. Change the text size in <b>Settings</b> (the gear) or with <b>⌘+ / ⌘− / ⌘0</b>.</p>
+        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View. Change the text size in <b>Settings</b> or with <b>⌘+ / ⌘− / ⌘0</b>. <b>Zen Mode</b> (<b>⇧⌘H</b>) hides the toolbar for distraction-free writing.</p>
         <table class="help-cheat">
           <thead><tr><th>type this</th><th>see this</th></tr></thead>
           <tbody id="cheatBody"></tbody>
@@ -368,7 +376,7 @@
       // text hints must match the OS. The host tells us via STATE.mac; default to
       // Mac if unknown. K() rewrites the ⌘ glyphs in a string for Windows.
       const MAC = !(STATE && STATE.mac === false);
-      const WINMAP = [["⌘+ / ⌘− / ⌘0", "Ctrl +/− and Ctrl 0"], ["⌘+ / ⌘−", "Ctrl +/−"], ["⌘E", "Ctrl+E"], ["⌘S", "Ctrl+S"], ["⌘", "Ctrl"]];
+      const WINMAP = [["⇧⌘H", "Ctrl+Shift+H"], ["⌘+ / ⌘− / ⌘0", "Ctrl +/− and Ctrl 0"], ["⌘+ / ⌘−", "Ctrl +/−"], ["⌘E", "Ctrl+E"], ["⌘S", "Ctrl+S"], ["⌘", "Ctrl"]];
       function K(s) { if (MAC || !s) return s; let r = s; for (const p of WINMAP) r = r.split(p[0]).join(p[1]); return r; }
       if (!MAC) {
         document.querySelectorAll("[data-tip]").forEach((el) => { if (el.dataset.tip) el.dataset.tip = K(el.dataset.tip); });
@@ -924,6 +932,10 @@
           return;
         }
         if (mod && k === "e") { e.preventDefault(); setMode(!editing); return; }
+        // Zen Mode: hide the bottom toolbar for distraction-free writing (⇧⌘H /
+        // Ctrl+Shift+H; ⌘H alone is macOS "Hide App"). Session-only — the toolbar
+        // returns when the pad reopens.
+        if (mod && e.shiftKey && k === "h") { e.preventDefault(); document.body.classList.toggle("zen"); return; }
         // Text zoom: ⌘+ / ⌘= to grow, ⌘- to shrink, ⌘0 to reset.
         if (mod && (k === "=" || k === "+")) { e.preventDefault(); stepZoom(1); return; }
         if (mod && (k === "-" || k === "_")) { e.preventDefault(); stepZoom(-1); return; }

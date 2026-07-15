@@ -118,7 +118,10 @@
       .help-cheat td.md li.task { margin-left: -14px; }
       .help-cheat td.md input { pointer-events: none; }
       .help-cheat td.md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; pointer-events: none; }
-      .help-sec { margin-top: 18px; }
+      .help-cheat.narrow { width: 86%; }
+      /* Divider makes the split between the Markdown cheatsheet and the lyrics
+         section clearer. */
+      .help-sec { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
       .help-sec > strong { display: block; font-size: 13px; margin-bottom: 6px; }
       .help-list { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
       .help-list li { margin: 4px 0; }
@@ -141,7 +144,7 @@
       .linkbtn:hover { text-decoration: underline; background: transparent; }
       /* Flat slider matching Live's controls. */
       .range {
-        -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+        -webkit-appearance: none; appearance: none; display: block; width: 220px; max-width: 100%; height: 4px;
         background: var(--field); border: 1px solid var(--line); border-radius: 3px; outline: 0; cursor: pointer;
       }
       .range::-webkit-slider-thumb {
@@ -201,10 +204,18 @@
         height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
         background: var(--surface); flex: 0 0 auto; user-select: none;
       }
-      /* Zen Mode: hide the bottom toolbar AND the passive info bars for
-         distraction-free writing (⌥⌘Z). Esc / ⌘S still save. A brief hint on
-         entry says how to get back. Session-only — never persisted. */
-      body.zen .bar, body.zen .hint, body.zen .pathbar { display: none; }
+      /* Zen Mode: hide the passive info bars and slide the toolbar out of view for
+         distraction-free writing (⌥⌘Z). Esc / ⌘S still save. A brief hint on entry
+         says how to get back. Session-only — never persisted. */
+      body.zen .hint, body.zen .pathbar { display: none; }
+      body.zen .bar {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+        transform: translateY(100%); transition: transform 0.18s ease;
+      }
+      body.zen.peek .bar { transform: none; }
+      /* A thin strip along the bottom edge that reveals the toolbar on hover. */
+      .zen-peek { display: none; }
+      body.zen .zen-peek { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: 12px; z-index: 24; }
       .zen-hint {
         position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
         background: #14161a; color: var(--text); border: 1px solid var(--line);
@@ -323,6 +334,7 @@
       </div>
     </div>
 
+    <div class="zen-peek" id="zenPeek"></div>
     <div class="zen-hint" id="zenHint"></div>
 
     <div class="help" id="settings" hidden>
@@ -337,18 +349,18 @@
             <span class="set-val"><span id="fontVal">13</span> px <button id="fontReset" class="linkbtn" type="button">Reset</button></span>
           </div>
           <input id="fontRange" class="range" type="range" min="10" max="28" step="1" value="13" aria-label="Text size in pixels" />
-          <div class="set-preview" id="fontPreview">Walking in the rain with you tonight</div>
+          <div class="set-preview" id="fontPreview">within cells interlinked</div>
         </div>
         <div class="set-row">
           <div class="set-head"><span class="set-label"><label>Window size</label><span class="info tip-left" data-tip="Reopens the pad at this size" tabindex="0" role="img" aria-label="Window size info"></span></span></div>
           <div class="seg" id="winSize" role="group" aria-label="Window size">
-            <button type="button" data-size="s">Compact</button>
-            <button type="button" data-size="m">Regular</button>
+            <button type="button" data-size="s" aria-label="Compact window"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="4.5" y="5" width="7" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+            <button type="button" data-size="m" aria-label="Regular window"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
           </div>
         </div>
         <div class="set-row">
           <div class="set-head"><span class="set-label"><label>Zen Mode</label><span class="info tip-left" data-tip="Hides the toolbar for distraction-free writing (⌥⌘Z)" tabindex="0" role="img" aria-label="Zen Mode info"></span></span></div>
-          <div class="seg"><button type="button" id="zenBtn">Hide toolbar</button></div>
+          <div class="seg"><button type="button" id="zenBtn" aria-label="Enter Zen Mode"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5.5 V3 A1 1 0 0 1 3 2 H5.5 M14 5.5 V3 A1 1 0 0 0 13 2 H10.5 M2 10.5 V13 A1 1 0 0 0 3 14 H5.5 M14 10.5 V13 A1 1 0 0 1 13 14 H10.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></div>
         </div>
       </div>
     </div>
@@ -359,8 +371,8 @@
           <strong>Markdown &amp; lyric timing</strong>
           <button id="helpClose" class="icon ghost" aria-label="Close help">✕</button>
         </div>
-        <p class="help-how">Write in <b>Markdown</b>, then hit <b>View</b> (<b>⌘E</b>) to format it. Checkboxes are clickable in View.</p>
-        <table class="help-cheat">
+        <p class="help-how">Write in <b>Markdown</b>, then hit <b>View</b> (<b>⌘E</b>) to see it rendered. Checkboxes are clickable in View.</p>
+        <table class="help-cheat narrow">
           <thead><tr><th>type this</th><th>see this</th></tr></thead>
           <tbody id="cheatBody"></tbody>
         </table>
@@ -383,7 +395,7 @@
               <tr><td class="raw"><code>[=bpm/2]</code></td><td class="md">30 s in, any tempo</td></tr>
             </tbody>
           </table>
-          <p class="help-how">Bar tags hold through tempo changes; clock tags assume a steady tempo.</p>
+          <p class="help-how">Bar tags hold through tempo changes. Clock tags assume a steady tempo.</p>
         </div>
       </div>
     </div>
@@ -768,6 +780,13 @@
         closeSettings();
         if (!document.body.classList.contains("zen")) toggleZen();
       });
+      // In Zen Mode, hovering the bottom edge slides the toolbar up temporarily;
+      // it slides back down when the pointer leaves it.
+      const bar = document.querySelector(".bar");
+      document.getElementById("zenPeek").addEventListener("mouseenter", () => {
+        if (document.body.classList.contains("zen")) document.body.classList.add("peek");
+      });
+      bar.addEventListener("mouseleave", () => document.body.classList.remove("peek"));
 
       // ---- "bring notes from another project" offer (after a Save As) ----
       let dismissedMigration = false;
@@ -787,9 +806,12 @@
       // next to the renderer that highlights the same lines.
       const tlbar = document.getElementById("tlbar");
       const tltext = document.getElementById("tltext");
+      const tlBtn = document.getElementById("cornerTimeline");
+      const tlLoc = document.getElementById("tlloc");
+      const tlClip = document.getElementById("tlclip");
       let tlLines = [];
       let pendingTimeline = null;   // {lines, mode} attached to the "timeline" post
-      // Opened from the timeline toolbar button.
+      function closeTimelineBar() { tlbar.hidden = true; tlBtn.classList.remove("on"); }
       function openTimelineBar() {
         contents[current] = pad.value;                 // capture latest edits
         tlLines = extractLyricLinesJS(pad.value);
@@ -797,16 +819,20 @@
         tltext.textContent = n
           ? "Send " + n + (n === 1 ? " line" : " lines") + " to the timeline:"
           : "No tagged lyrics yet. Tag a line like [1].";
-        document.getElementById("tlloc").disabled = !n;
-        document.getElementById("tlclip").disabled = !n;
+        // With nothing to send, offer only Cancel — no Locators/Clips.
+        tlLoc.hidden = !n;
+        tlClip.hidden = !n;
         tlbar.hidden = false;
+        tlBtn.classList.add("on");
       }
-      document.getElementById("cornerTimeline").addEventListener("click", openTimelineBar);
-      document.getElementById("tlno").addEventListener("click", () => { tlbar.hidden = true; });
+      // Clicking the timeline button toggles its bar, like the View / file-location
+      // buttons toggle their panels.
+      tlBtn.addEventListener("click", () => { tlbar.hidden ? openTimelineBar() : closeTimelineBar(); });
+      document.getElementById("tlno").addEventListener("click", closeTimelineBar);
       // The bar is just a prompt over the still-editable note — so any move back to
       // the note (typing, or clicking into it) dismisses it instead of leaving it
       // stuck until Cancel/Send. Re-open it from the timeline button when ready.
-      const dismissTlbar = () => { if (!tlbar.hidden) tlbar.hidden = true; };
+      const dismissTlbar = () => { if (!tlbar.hidden) closeTimelineBar(); };
       pad.addEventListener("input", dismissTlbar);
       pad.addEventListener("focus", dismissTlbar);
       preview.addEventListener("mousedown", dismissTlbar);
@@ -815,12 +841,12 @@
         // lines added/changed after it opened must still be picked up.
         contents[current] = pad.value;
         const lines = extractLyricLinesJS(pad.value);
-        if (!lines.length) { tlbar.hidden = true; return; }
+        if (!lines.length) { closeTimelineBar(); return; }
         pendingTimeline = { lines: lines, mode: mode };
         post("timeline");
       };
-      document.getElementById("tlloc").addEventListener("click", () => sendTimeline("locators"));
-      document.getElementById("tlclip").addEventListener("click", () => sendTimeline("clips"));
+      tlLoc.addEventListener("click", () => sendTimeline("locators"));
+      tlClip.addEventListener("click", () => sendTimeline("clips"));
 
       // ---- unsaved-Set hint ----
       // Until a Set is saved it lives in Ableton's transient "Untitled Project"
@@ -968,7 +994,7 @@
         if (e.key === "Escape") {
           // Back out of a transient bottom strip first, rather than saving/closing.
           if (!confirmBar.hidden) { e.preventDefault(); confirmBar.hidden = true; return; }
-          if (!tlbar.hidden) { e.preventDefault(); tlbar.hidden = true; return; }
+          if (!tlbar.hidden) { e.preventDefault(); closeTimelineBar(); return; }
           if (!migrate.hidden) { e.preventDefault(); dismissedMigration = true; migrate.hidden = true; return; }
           e.preventDefault();
           if (editing) setMode(false);   // edit → back to View

@@ -24,9 +24,10 @@ import { buildLocators, buildClips, placeWithoutCollision } from "./timeline.js"
 // almost everywhere you right-click.
 const SCOPES = ["AudioTrack", "MidiTrack", "ClipSlot", "Scene"] as const;
 
-// Seeded into a pad that has no content yet.
+// Seeded into a pad that has no content yet. Shows a checkbox and a tagged lyric
+// block (a [1] line plus a flow line) so the timeline feature is discoverable.
 const DEFAULT_MD =
-  "# TO-DO\n- [x] Create a session note\n- [ ] Capture lyrics, ideas and to-dos…\n\n# LYRICS\n♪\n";
+  "# Notes\n- [x] Create a session note\n- [ ] Jot your first idea\n\n# Lyrics\n[1] your first line here\nand this line flows one bar later\n";
 
 // Two presets: m is the default; s is the compact variant.
 const SIZES: Record<string, { w: number; h: number }> = {

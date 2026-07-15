@@ -110,7 +110,9 @@
         background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
         display: inline-block; line-height: 1.7;
       }
-      .help-cheat td.md { line-height: 1.4; }
+      /* Pin the cheatsheet's rendered size — the note font (--note-font) must only
+         affect the editor and its preview, not the menus. */
+      .help-cheat td.md { line-height: 1.4; font-size: 12px; }
       .help-cheat td.md h1, .help-cheat td.md h2, .help-cheat td.md h3 { font-size: 13px; margin: 0; color: var(--text); font-weight: 600; }
       .help-cheat td.md p, .help-cheat td.md ul, .help-cheat td.md ol { margin: 0; }
       .help-cheat td.md ul, .help-cheat td.md ol { padding-left: 16px; }
@@ -144,7 +146,7 @@
       .linkbtn:hover { text-decoration: underline; background: transparent; }
       /* Flat slider matching Live's controls. */
       .range {
-        -webkit-appearance: none; appearance: none; display: block; width: 220px; max-width: 100%; height: 4px;
+        -webkit-appearance: none; appearance: none; display: block; width: 150px; max-width: 100%; height: 4px;
         background: var(--field); border: 1px solid var(--line); border-radius: 3px; outline: 0; cursor: pointer;
       }
       .range::-webkit-slider-thumb {
@@ -204,16 +206,18 @@
         height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
         background: var(--surface); flex: 0 0 auto; user-select: none;
       }
-      /* Zen Mode: hide the passive info bars and slide the toolbar out of view for
-         distraction-free writing (⌥⌘Z). Esc / ⌘S still save. A brief hint on entry
-         says how to get back. Session-only — never persisted. */
-      body.zen .hint, body.zen .pathbar { display: none; }
-      body.zen .bar {
+      /* The dock holds the toolbar and any transient bars (path, timeline, …). */
+      .dock { flex: 0 0 auto; }
+      /* Zen Mode: hide the passive "unsaved" hint and slide the whole dock out of
+         view for distraction-free writing (⌥⌘Z). Esc / ⌘S still save. A brief hint
+         on entry says how to get back. Session-only — never persisted. */
+      body.zen .hint { display: none; }
+      body.zen .dock {
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
         transform: translateY(100%); transition: transform 0.18s ease;
       }
-      body.zen.peek .bar { transform: none; }
-      /* A thin strip along the bottom edge that reveals the toolbar on hover. */
+      body.zen.peek .dock { transform: none; }
+      /* A thin strip along the bottom edge that reveals the dock on hover. */
       .zen-peek { display: none; }
       body.zen .zen-peek { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: 12px; z-index: 24; }
       .zen-hint {
@@ -283,6 +287,7 @@
       <div class="md" id="preview"></div>
       <textarea id="pad" placeholder="Capture lyrics, ideas and to-dos…" spellcheck="true"></textarea>
     </div>
+    <div class="dock" id="dock">
     <div class="migrate" id="migrate" hidden>
       <span class="mtext" id="mtext"></span>
       <span class="mact">
@@ -332,6 +337,7 @@
         <button id="discard" class="tip-right" data-tip="Discard edits & close" aria-label="Revert">Revert</button>
         <button id="save" class="primary tip-right" data-tip="Save & close (⌘S / Esc)" aria-label="Done">Done</button>
       </div>
+    </div>
     </div>
 
     <div class="zen-peek" id="zenPeek"></div>
@@ -386,7 +392,7 @@
             <li>In <b>View</b>, each lyric shows its spot as a chip (<b>↳</b> = flows from above).</li>
           </ul>
           <table class="help-cheat">
-            <thead><tr><th>tag a line</th><th>lands it at</th></tr></thead>
+            <thead><tr><th>tag a line</th><th>lands at</th></tr></thead>
             <tbody>
               <tr><td class="raw"><code>[17]</code></td><td class="md">bar 17</td></tr>
               <tr><td class="raw"><code>[17.3]</code></td><td class="md">bar 17, beat 3</td></tr>
@@ -745,13 +751,22 @@
       const INFO_SVG = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 7.1 V11.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="4.7" r="0.6" fill="currentColor"/></svg>';
       document.querySelectorAll(".info").forEach((el) => { el.innerHTML = INFO_SVG; });
       const settingsPanel = document.getElementById("settings");
+      const settingsBtn = document.getElementById("settingsBtn");
       const winSeg = document.getElementById("winSize");
+      const zenBtn = document.getElementById("zenBtn");
+      const isZen = () => document.body.classList.contains("zen");
       function markWinSize() {
         const cur = (STATE && STATE.size) || "m";
         winSeg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.size === cur));
       }
-      const closeSettings = () => { settingsPanel.hidden = true; };
-      document.getElementById("settingsBtn").addEventListener("click", () => { markWinSize(); settingsPanel.hidden = false; });
+      function openSettings() {
+        markWinSize();
+        zenBtn.classList.toggle("on", isZen());   // reflect current Zen state
+        settingsPanel.hidden = false; settingsBtn.classList.add("on");
+      }
+      function closeSettings() { settingsPanel.hidden = true; settingsBtn.classList.remove("on"); }
+      // Toggle open/closed on the button; click-outside (backdrop) closes too.
+      settingsBtn.addEventListener("click", () => (settingsPanel.hidden ? openSettings() : closeSettings()));
       document.getElementById("settingsClose").addEventListener("click", closeSettings);
       settingsPanel.addEventListener("click", (e) => { if (e.target === settingsPanel) closeSettings(); });
       // Window size can't change in place — post a resize so the host reopens the
@@ -767,6 +782,7 @@
       let zenTimer = null;
       function toggleZen() {
         const on = document.body.classList.toggle("zen");
+        if (!on) document.body.classList.remove("peek");
         clearTimeout(zenTimer);
         if (on) {
           zenHint.textContent = K("Zen · ⌥⌘Z to exit");
@@ -776,17 +792,16 @@
           zenHint.classList.remove("show");
         }
       }
-      document.getElementById("zenBtn").addEventListener("click", () => {
-        closeSettings();
-        if (!document.body.classList.contains("zen")) toggleZen();
-      });
-      // In Zen Mode, hovering the bottom edge slides the toolbar up temporarily;
-      // it slides back down when the pointer leaves it.
-      const bar = document.querySelector(".bar");
+      // The Settings button is a real toggle: enters or exits Zen.
+      zenBtn.addEventListener("click", () => { closeSettings(); toggleZen(); });
+      // In Zen Mode, hovering the bottom edge slides the whole dock (toolbar plus
+      // any open path / timeline bar) up temporarily; it slides back when the
+      // pointer leaves it.
+      const dock = document.getElementById("dock");
       document.getElementById("zenPeek").addEventListener("mouseenter", () => {
-        if (document.body.classList.contains("zen")) document.body.classList.add("peek");
+        if (isZen()) document.body.classList.add("peek");
       });
-      bar.addEventListener("mouseleave", () => document.body.classList.remove("peek"));
+      dock.addEventListener("mouseleave", () => document.body.classList.remove("peek"));
 
       // ---- "bring notes from another project" offer (after a Save As) ----
       let dismissedMigration = false;
@@ -940,8 +955,11 @@
 
       // ---- Markdown help panel ----
       const helpPanel = document.getElementById("help");
-      const closeHelp = () => { helpPanel.hidden = true; };
-      document.getElementById("helpBtn").addEventListener("click", () => { helpPanel.hidden = false; });
+      const helpBtn = document.getElementById("helpBtn");
+      const closeHelp = () => { helpPanel.hidden = true; helpBtn.classList.remove("on"); };
+      const openHelp = () => { helpPanel.hidden = false; helpBtn.classList.add("on"); };
+      // Toggle on the button; click-outside (backdrop) closes too.
+      helpBtn.addEventListener("click", () => (helpPanel.hidden ? openHelp() : closeHelp()));
       document.getElementById("helpClose").addEventListener("click", closeHelp);
       helpPanel.addEventListener("click", (e) => { if (e.target === helpPanel) closeHelp(); });
       // Show each snippet next to its live-rendered result.

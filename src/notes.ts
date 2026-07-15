@@ -1,4 +1,4 @@
-// Pure file/state logic for Session Notes — no SDK or Live dependency, so it can
+// Pure file/state logic for Session Notes - no SDK or Live dependency, so it can
 // be unit-tested headlessly. The extension (extension.ts) wires these to the
 // Live host; detection of the project folder lives there since it needs Live.
 // Project notes always live in <root>/Session Notes/.
@@ -63,7 +63,7 @@ export const projectNotesDir = (root: string) => path.join(root, "Session Notes"
 // "Untitled Project" or a timestamped "… Temp Project" under Live Recordings
 // (the latter is what the import-probe creates for an audio-less unsaved Set).
 // We don't prompt the "bring notes" offer when landing IN one (you don't pull
-// notes into a throwaway) — but a temp project CAN still be an offer *source*,
+// notes into a throwaway) - but a temp project CAN still be an offer *source*,
 // so notes taken in an unsaved Set carry into the real project once it's saved
 // (keeping the temp files when Ableton prompts).
 export const isTransientProject = (root: string) => {
@@ -83,13 +83,13 @@ export const migrateLegacyProjectNote = (root: string) => {
     const dest = path.join(dir, "Session.md");
     if (!fs.existsSync(dest)) fs.renameSync(legacy, dest);
   } catch {
-    /* ignore — worst case the legacy file just stays where it was */
+    /* ignore - worst case the legacy file just stays where it was */
   }
 };
 
 // Earlier versions stored global notes in a "notebooks" folder; they're now
 // called Global Notes. Fold the old folder into the new name (visible in the
-// path bar) so nothing orphans. Runs once — after that the legacy folder is gone.
+// path bar) so nothing orphans. Runs once - after that the legacy folder is gone.
 export const migrateNotebooksDir = (baseDir: string) => {
   const legacy = path.join(baseDir, "notebooks");
   const dest = path.join(baseDir, "Global Notes");
@@ -104,10 +104,10 @@ export const migrateNotebooksDir = (baseDir: string) => {
     try {
       if (fs.readdirSync(legacy).length === 0) fs.rmdirSync(legacy);
     } catch {
-      /* leftover non-md files — leave the old folder in place */
+      /* leftover non-md files - leave the old folder in place */
     }
   } catch {
-    /* ignore — worst case the old notes stay under notebooks/ */
+    /* ignore - worst case the old notes stay under notebooks/ */
   }
 };
 
@@ -136,7 +136,7 @@ export const applyRenames = (
         fs.renameSync(from, to);
       }
     } catch {
-      /* ignore — the map write below still saves the content */
+      /* ignore - the map write below still saves the content */
     }
   }
 };
@@ -197,7 +197,15 @@ export const migrationOffer = (
 export const buildState = (
   root: string | null,
   offer: { fromName: string; count: number } | null,
-  opts: { notebooksDir: string; saved: SavedState; defaultMd: string },
+  opts: {
+    notebooksDir: string;
+    saved: SavedState;
+    defaultMd: string;
+    // When set, project notes are read from here instead of <root>/Session Notes.
+    // Used to stage an unsaved Set's notes in the extension's own data dir, out of
+    // reach of Ableton's "Delete temp files" (which nukes the temp project folder).
+    projNotesDir?: string | undefined;
+  },
 ) => {
   const { notebooksDir, saved, defaultMd } = opts;
   const globalNotes: Record<string, string> = Object.fromEntries(
@@ -209,13 +217,14 @@ export const buildState = (
   let projNotesDir: string | null = null;
   const projectNotes: Record<string, string> = {};
   if (root) {
-    migrateLegacyProjectNote(root);
+    // Staging keeps its own flat folder; only a real project has a legacy note.
+    if (!opts.projNotesDir) migrateLegacyProjectNote(root);
     projectName = path.basename(root);
     projectDir = root;
-    projNotesDir = projectNotesDir(root);
+    projNotesDir = opts.projNotesDir ?? projectNotesDir(root);
     for (const n of listMd(projNotesDir))
       projectNotes[n] = readFile(mdPath(projNotesDir, n));
-    // Seed a first note so there's something to write into on save — but not
+    // Seed a first note so there's something to write into on save - but not
     // while offering to bring notes in, so the picker stays clean. Named "Session"
     // ("Session Notes" is the folder, not a file inside it).
     if (Object.keys(projectNotes).length === 0 && !offer)
@@ -263,12 +272,20 @@ export const persist = (
   payload: Payload,
   root: string | null,
   notebooksDir: string,
+  // When set, project notes are written here (the staging dir for an unsaved Set)
+  // instead of <root>/Session Notes. Staging is always ours to write, so it skips
+  // the vanished-project-folder guard below.
+  projNotesDirOverride?: string,
 ) => {
-  if (root) {
+  if (root && projNotesDirOverride) {
+    applyDeletes(projNotesDirOverride, payload.projectDeletes);
+    applyRenames(projNotesDirOverride, payload.projectRenames);
+    writeMap(projNotesDirOverride, payload.projectMap);
+  } else if (root) {
     const dir = projectNotesDir(root);
     // Only write into the project if its folder is still there. If it was
     // renamed or moved while the pad was open, writing would recreate a ghost
-    // folder at the stale path — so instead keep the edits by recovering them
+    // folder at the stale path - so instead keep the edits by recovering them
     // into global notebooks (under a non-colliding name) rather than lose them.
     if (fs.existsSync(path.join(root, "Ableton Project Info"))) {
       applyDeletes(dir, payload.projectDeletes);

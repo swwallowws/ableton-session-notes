@@ -10,15 +10,15 @@
            main surface ~#2e3137, dark control fields ~#1d1f23). The writing area
            is a dark field, the bar matches Live's surface, and buttons sit lighter
            above it. Amber accent and blue text-selection are Live's own. */
-        --bg: #1f2228;          /* writing area — dark control field */
-        --surface: #2e3137;     /* bottom bar — surface tone */
+        --bg: #1f2228;          /* writing area - dark control field */
+        --surface: #2e3137;     /* bottom bar - surface tone */
         --field: #43464e;       /* buttons / notebook selector (raised) */
         --field-hover: #4c4f57;
         --text: #b6b7bd;        /* control foreground */
         --muted: #74767e;       /* disabled text */
         --line: #16181c;        /* dark frame */
-        --accent: #e4e5e8;      /* accent (default / enabled) — colorless, brighter than text */
-        --select: #c9cace;      /* text selection — neutral */
+        --accent: #e4e5e8;      /* accent (default / enabled) - colorless, brighter than text */
+        --select: #c9cace;      /* text selection - neutral */
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
@@ -71,7 +71,7 @@
       .md code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #2a2d33; padding: 1px 4px; border-radius: 2px; }
       .md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
       .md hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
-      /* Lyric lines (recognised by their position tag, in View) — an accent rail
+      /* Lyric lines (recognised by their position tag, in View) - an accent rail
          plus a chip showing where the line lands, so it reads like a compiled
          result. Flow lines (untagged, inheriting the block's position) are dimmer. */
       .md .lyric { display: flex; align-items: baseline; gap: 8px; margin: 2px 0; padding: 1px 0 1px 9px; border-left: 2px solid var(--accent); }
@@ -110,7 +110,7 @@
         background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
         display: inline-block; line-height: 1.7;
       }
-      /* Pin the cheatsheet's rendered size — the note font (--note-font) must only
+      /* Pin the cheatsheet's rendered size - the note font (--note-font) must only
          affect the editor and its preview, not the menus. */
       .help-cheat td.md { line-height: 1.4; font-size: 12px; }
       .help-cheat td.md h1, .help-cheat td.md h2, .help-cheat td.md h3 { font-size: 13px; margin: 0; color: var(--text); font-weight: 600; }
@@ -177,7 +177,7 @@
       .migrate .mtext { min-width: 0; }
       .migrate .mact { display: flex; gap: 6px; flex: 0 0 auto; }
       .migrate button { height: 23px; padding: 0 11px; font-size: 11px; }
-      /* Passive info line — shown only while the Set is unsaved. */
+      /* Passive info line - shown only while the Set is unsaved. */
       .hint {
         flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
         padding: 7px 12px; border-top: 1px solid var(--line);
@@ -211,7 +211,7 @@
       .dock { flex: 0 0 auto; }
       /* Zen Mode: hide the passive "unsaved" hint and slide the whole dock out of
          view for distraction-free writing (⌥⌘Z). Esc / ⌘S still save. A brief hint
-         on entry says how to get back. Session-only — never persisted. */
+         on entry says how to get back. Session-only - never persisted. */
       body.zen .hint { display: none; }
       body.zen .dock {
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
@@ -231,9 +231,9 @@
       .left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; }
       .tools { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
       /* Meta tools (settings, help) sit in their own group, divided from the
-         per-note tools — mirroring the divider before Revert / Done. */
+         per-note tools - mirroring the divider before Revert / Done. */
       .tools-meta { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--line); }
-      /* Flat, boxy controls with a subtle frame and clear hover — Live's style.
+      /* Flat, boxy controls with a subtle frame and clear hover - Live's style.
          Fixed width so the <select> doesn't balloon to its widest option. */
       .nb {
         font: inherit; color: var(--text); background: var(--field);
@@ -242,7 +242,7 @@
       }
       .nb:hover { background: var(--field-hover); }
       .count { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-      /* Small mode is tight — drop the word count to keep Revert/Done roomy. */
+      /* Small mode is tight - drop the word count to keep Revert/Done roomy. */
       body.small .count { display: none; }
       /* Divider sets the note controls apart from Revert / Done. */
       .actions {
@@ -270,10 +270,10 @@
         border: 1px solid var(--line); padding: 3px 7px; border-radius: 3px; font-size: 10px;
         pointer-events: none; z-index: 10;
       }
-      /* anchor edge tooltips inward so they never overflow the window — no wrapping */
+      /* anchor edge tooltips inward so they never overflow the window - no wrapping */
       [data-tip].tip-left:hover::after, [data-tip].tip-left:focus-visible::after { left: 0; right: auto; transform: none; }
       [data-tip].tip-right:hover::after, [data-tip].tip-right:focus-visible::after { left: auto; right: 0; transform: none; }
-      /* Info affordance — a muted circled-i that reveals the tip on hover/focus. */
+      /* Info affordance - a muted circled-i that reveals the tip on hover/focus. */
       .set-label { display: inline-flex; align-items: center; gap: 5px; }
       .info { display: inline-flex; align-items: center; justify-content: center; color: var(--muted); cursor: help; border-radius: 50%; }
       .info:hover, .info:focus-visible { color: var(--text); outline: none; }
@@ -303,7 +303,7 @@
     <div class="migrate" id="tlbar" hidden>
       <span class="mtext" id="tltext"></span>
       <span class="mact">
-        <button id="tlloc" class="primary">Locators</button>
+        <button id="tlloc">Locators</button>
         <button id="tlclip">Clips</button>
         <button id="tlno" class="ghost">Cancel</button>
       </span>
@@ -473,7 +473,7 @@
         // A disabled option draws a separator line between the notes and the
         // actions. Actions use all-emoji icons (same cell width) so they align.
         // A disabled option draws a separator line between the notes and the
-        // actions. No leading glyphs — a native <select> can't align mismatched
+        // actions. No leading glyphs - a native <select> can't align mismatched
         // glyph widths, so plain text is the only reliably-aligned option.
         const sep = new Option("──────────", "__sep__");
         sep.disabled = true;
@@ -557,7 +557,7 @@
         const rest = Object.keys(contents);
         let next = rest.filter((k) => scopeOf(k) === scope).sort((a, b) => a.localeCompare(b))[0]
                 || rest.sort((a, b) => a.localeCompare(b))[0];
-        if (!next) {                                   // deleted the last note — start fresh
+        if (!next) {                                   // deleted the last note - start fresh
           next = (hasProject ? "p:" : "g:") + "Untitled";
           contents[next] = ""; createdThisSession.add(next);
         }
@@ -596,7 +596,7 @@
         return s;
       }
       // ---- lyric detection (mirrors extractLyricLines() in src/timeline.ts) ----
-      // A line "uses the timing notation" if it has a leading position tag —
+      // A line "uses the timing notation" if it has a leading position tag -
       // musical [17]/[17.3], clock [1:04], or expression [=8*4]. bpm-independent
       // so the View can flag lyrics without knowing the Set tempo.
       const POSITION_TAG = /^\[(?:=[^\]]+|\d+(?:\.\d+){0,2}|\d+:\d{1,2}(?:\.\d+)?)\]/;
@@ -610,7 +610,7 @@
         return line || null;
       }
       // Aligned to the note's lines: each entry is null (not a lyric) or
-      // { text, tag } — tag is the raw position tag ("17", "1:04", "=8*4"), or ""
+      // { text, tag } - tag is the raw position tag ("17", "1:04", "=8*4"), or ""
       // for an untagged flow line. A tagged line opens a block; untagged lines
       // beneath it flow; a blank line or heading closes it. No tags → no lyrics.
       function classifyLyrics(md) {
@@ -629,7 +629,7 @@
       function extractLyricLinesJS(md) { return classifyLyrics(md).filter(Boolean).map((x) => x.text); }
       // Humanise a position tag for the in-View chip.
       function tagLabel(tag) {
-        if (!tag) return "↳";                       // flow line — inherits position
+        if (!tag) return "↳";                       // flow line - inherits position
         if (tag.charAt(0) === "=") return tag;      // expression
         if (tag.indexOf(":") !== -1) return tag;    // clock m:ss
         return "bar " + tag;                        // musical
@@ -638,7 +638,7 @@
       function render(src) {
         const lines = src.replace(/\r\n?/g, "\n").split("\n");
         const lyrics = classifyLyrics(src);
-        // Only decorate lyric lines when the note actually USES tags — a plain
+        // Only decorate lyric lines when the note actually USES tags - a plain
         // note (whole-note mode) shouldn't render every line as a lyric.
         const taggedMode = lyrics.some((x) => x && x.tag);
         let html = "", para = [], listBuf = [], listType = null;
@@ -711,8 +711,8 @@
           pad.value = a.join("\n"); renderPreview(); refreshCount();
         }
       });
-      // Enter edit mode only on a genuine tap — never after selecting text or
-      // dragging — so casual readers stay in View mode.
+      // Enter edit mode only on a genuine tap - never after selecting text or
+      // dragging - so casual readers stay in View mode.
       let downX = 0, downY = 0;
       preview.addEventListener("mousedown", (e) => { downX = e.clientX; downY = e.clientY; });
       preview.addEventListener("click", (e) => {
@@ -726,7 +726,7 @@
 
       setMode(false); // render by default
 
-      // ---- note text size (zoom) — a continuous px value (ZOOM_MIN..ZOOM_MAX),
+      // ---- note text size (zoom) - a continuous px value (ZOOM_MIN..ZOOM_MAX),
       // set from the Settings slider or ⌘+ / ⌘− / ⌘0. Applies live via a CSS var
       // and rides the post payload so the host persists it. ----
       const ZOOM_MIN = 10, ZOOM_MAX = 28, ZOOM_DEFAULT = 13;
@@ -769,7 +769,7 @@
       settingsBtn.addEventListener("click", () => (settingsPanel.hidden ? openSettings() : closeSettings()));
       document.getElementById("settingsClose").addEventListener("click", closeSettings);
       settingsPanel.addEventListener("click", (e) => { if (e.target === settingsPanel) closeSettings(); });
-      // Window size can't change in place — post a resize so the host reopens the
+      // Window size can't change in place - post a resize so the host reopens the
       // pad at the new size (persisting the current zoom/edits first via post()).
       winSeg.addEventListener("click", (e) => {
         const b = e.target.closest("button[data-size]");
@@ -795,7 +795,7 @@
       // The Settings button is a real toggle: enters or exits Zen.
       zenBtn.addEventListener("click", () => { closeSettings(); toggleZen(); });
       // In Zen Mode, reveal the dock (toolbar plus any open path / timeline bar)
-      // as the pointer nears where the toolbar normally sits — its top edge, not
+      // as the pointer nears where the toolbar normally sits - its top edge, not
       // just the very bottom of the screen. The band is at least the dock's own
       // height, so a taller dock (a path/timeline bar open) stays revealed while
       // the pointer is over it; moving back up past that band hides it again.
@@ -813,7 +813,7 @@
       if (STATE && STATE.migration) {
         const n = STATE.migration.count;
         document.getElementById("mtext").textContent =
-          "New project — bring your " + n + (n === 1 ? " note" : " notes") +
+          "New project - bring your " + n + (n === 1 ? " note" : " notes") +
           " from “" + STATE.migration.fromName + "” over?";
         migrate.hidden = false;
       }
@@ -838,7 +838,7 @@
         tltext.textContent = n
           ? "Send " + n + (n === 1 ? " line" : " lines") + " to the timeline:"
           : "No tagged lyrics yet. Tag a line like [1].";
-        // With nothing to send, offer only Cancel — no Locators/Clips.
+        // With nothing to send, offer only Cancel - no Locators/Clips.
         tlLoc.hidden = !n;
         tlClip.hidden = !n;
         tlbar.hidden = false;
@@ -848,7 +848,7 @@
       // buttons toggle their panels.
       tlBtn.addEventListener("click", () => { tlbar.hidden ? openTimelineBar() : closeTimelineBar(); });
       document.getElementById("tlno").addEventListener("click", closeTimelineBar);
-      // The bar is just a prompt over the still-editable note — so any move back to
+      // The bar is just a prompt over the still-editable note - so any move back to
       // the note (typing, or clicking into it) dismisses it instead of leaving it
       // stuck until Cancel/Send. Re-open it from the timeline button when ready.
       const dismissTlbar = () => { if (!tlbar.hidden) closeTimelineBar(); };
@@ -980,7 +980,7 @@
              + '<td class="md">' + render(src) + "</td></tr>";
       }).join("");
 
-      // Rendered links are for reference only — never navigate the webview away.
+      // Rendered links are for reference only - never navigate the webview away.
       document.addEventListener("click", (e) => {
         const a = e.target.closest ? e.target.closest("a") : null;
         if (a) e.preventDefault();
@@ -995,7 +995,7 @@
         const dir = folderFor(current);
         if (!dir) return "";
         // Match the host's separator so the shown/copied path is native on Windows
-        // (backslash dirs) as well as macOS — the dir comes straight from the host.
+        // (backslash dirs) as well as macOS - the dir comes straight from the host.
         const sep = dir.indexOf("\\") !== -1 ? "\\" : "/";
         return dir + sep + sanitizeName(nameOf(current)) + ".md";
       }
@@ -1025,7 +1025,7 @@
         }
         if (mod && k === "e") { e.preventDefault(); setMode(!editing); return; }
         // Zen Mode: hide the bottom toolbar for distraction-free writing. ⌥⌘Z /
-        // Ctrl+Alt+Z — NOT ⌘Z (undo) or ⇧⌘Z (redo), which must keep working in the
+        // Ctrl+Alt+Z - NOT ⌘Z (undo) or ⇧⌘Z (redo), which must keep working in the
         // note. Keyed on e.code because ⌥Z types "Ω" on macOS. Session-only.
         if (mod && e.altKey && e.code === "KeyZ") { e.preventDefault(); toggleZen(); return; }
         // Text zoom: ⌘+ / ⌘= to grow, ⌘- to shrink, ⌘0 to reset.

@@ -9,6 +9,8 @@ import {
   readFile,
   projectNotesDir,
   listMd,
+  mdPath,
+  applyDeletes,
   migrationOffer,
   buildState,
   persist,
@@ -41,6 +43,13 @@ export function activate(activation: ActivationContext) {
     path.join(os.homedir(), ".ableton-extensions", "session-notes");
   migrateNotebooksDir(baseDir); // fold any legacy "notebooks/" into "Global Notes/"
   const notebooksDir = path.join(baseDir, "Global Notes");
+  // Notes taken in an UNSAVED Set have no project folder to live in yet. Ableton
+  // parks such Sets in a temp project folder it may delete outright on "Delete
+  // temp files", taking any notes we wrote there with it. So we stage unsaved-Set
+  // notes here, in our own data dir, and offer to migrate them into the project
+  // once the Set is saved. Shared across unsaved Sets (there's no stable id for
+  // one until it's saved); cleared when the notes are brought into a real project.
+  const stagingDir = path.join(baseDir, "Unsaved Notes");
   const stateFile = path.join(baseDir, "state.json");
 
   const readState = (): SavedState => {
@@ -218,11 +227,11 @@ export function activate(activation: ActivationContext) {
 
   // ---- send lyric lines to the arrangement timeline --------------------------
   // Placement is driven by inline timing tags on the lyric lines (see timeline.ts):
-  //   • [bar] / [bar.beat] — musical time, tempo-map-proof
-  //   • [m:ss]             — clock time, converted to beats via the Set's tempo
+  //   • [bar] / [bar.beat] - musical time, tempo-map-proof
+  //   • [m:ss]             - clock time, converted to beats via the Set's tempo
   // Untagged lines flow one bar apart. Two shapes:
-  //   • locators — one named cue point per line (a point on the arrangement ruler)
-  //   • clips    — one named MIDI clip per line on a dedicated "Lyrics" track,
+  //   • locators - one named cue point per line (a point on the arrangement ruler)
+  //   • clips    - one named MIDI clip per line on a dedicated "Lyrics" track,
   //                spanning to the next line (timed) or width ∝ text (untimed)
   // The math lives in timeline.ts (pure/tested); here we just drive the SDK.
   const LYRIC_TRACK = "Lyrics";
@@ -260,7 +269,7 @@ export function activate(activation: ActivationContext) {
           }
         }
         // withinTransaction only groups operations FIRED synchronously inside its
-        // callback into one undo step — awaiting inside splits later work into
+        // callback into one undo step - awaiting inside splits later work into
         // separate steps. So fire all deletes and creates together (they stay in
         // order on the message queue, so old clips clear before the new ones land)
         // as one transaction, then name the created clips in a second transaction
@@ -294,8 +303,8 @@ export function activate(activation: ActivationContext) {
       } else {
         // Take a single snapshot of the cue points and split it: OURS (name-
         // prefixed, to be cleared) and everything else (the user's own markers,
-        // which stay). Deriving `occupied` from this same snapshot — rather than
-        // re-reading after the delete — avoids depending on when the model
+        // which stay). Deriving `occupied` from this same snapshot - rather than
+        // re-reading after the delete - avoids depending on when the model
         // reflects the deletion, so re-sends don't drift a locator forward.
         const allCues = arr(song.cuePoints);
         const isMine = (cp: any) => {
@@ -323,7 +332,7 @@ export function activate(activation: ActivationContext) {
         const times = placeWithoutCollision(plan.map((p) => p.time), occupied);
         // Unlike clips, cue points CAN'T share a beat, so a new locator created at
         // a beat one of ours is still occupying gets dropped. Fully clear ours
-        // FIRST (awaited), freeing those beats, before creating the new ones — this
+        // FIRST (awaited), freeing those beats, before creating the new ones - this
         // is what made re-sends flaky when both ran in one batch. Each phase is its
         // own batched transaction (deletes, then creates, then names).
         if (mine.length)
@@ -367,6 +376,10 @@ export function activate(activation: ActivationContext) {
 
   context.commands.registerCommand("notes.open", async () => {
     const root = await detectProjectRoot();
+    // An unsaved Set resolves to a throwaway temp project. Stage its notes in our
+    // own dir instead of that folder, so "Delete temp files" can't destroy them.
+    const transient = !!root && isTransientProject(root);
+    const projStore = transient ? stagingDir : undefined;
     let size = readState().size || "m";
     let zoom = readState().zoom || 0; // note text size in px (0 = default)
     // True right after we ask for a resize/bring reopen. The SDK can briefly refuse
@@ -374,21 +387,41 @@ export function activate(activation: ActivationContext) {
     // window we retry instead of silently leaving the pad closed.
     let reopening = false;
     // The loop lets a size change or a "bring notes" action close and instantly
-    // reopen the pad — the SDK dialog can't be resized or refreshed in place.
+    // reopen the pad - the SDK dialog can't be resized or refreshed in place.
     for (;;) {
       const st = readState();
       const src: SavedState = { dismissed: st.dismissed ?? [] };
       if (sessionSource) src.lastProject = sessionSource;
-      const offer = migrationOffer(root, src);
+      // Landing in a SAVED, empty project with notes waiting in staging means the
+      // user just saved the Set they were jotting in - offer to carry them over.
+      // Otherwise fall back to the in-session Save-As source (one saved project to
+      // another). `fromPath === stagingDir` marks the staging case for `bring`.
+      // Ignore an untouched seed: merely opening the pad in an unsaved Set writes
+      // the DEFAULT_MD template to staging, and that's not worth migrating (it would
+      // nag on every fresh project you save into).
+      const staged = listMd(stagingDir).filter(
+        (n) => readFile(mdPath(stagingDir, n)).trim() !== DEFAULT_MD.trim(),
+      );
+      const stagingOffer =
+        root && !transient &&
+        listMd(projectNotesDir(root)).length === 0 &&
+        !(st.dismissed ?? []).includes(root) &&
+        staged.length > 0
+          ? { fromPath: stagingDir, fromName: "your previous session", count: staged.length }
+          : null;
+      const offer = stagingOffer ?? migrationOffer(root, src);
       const state = buildState(
         root,
         offer && {
-          // A temp/unsaved source has an ugly timestamped folder name; the notes
-          // are really from the session you were just in, so say that instead.
-          fromName: isTransientProject(offer.fromPath) ? "your previous session" : offer.fromName,
+          // A temp/unsaved source (or staging) has no friendly name; the notes are
+          // really from the session you were just in, so say that instead.
+          fromName:
+            offer.fromPath === stagingDir || isTransientProject(offer.fromPath)
+              ? "your previous session"
+              : offer.fromName,
           count: offer.count,
         },
-        { notebooksDir, saved: st, defaultMd: DEFAULT_MD },
+        { notebooksDir, saved: st, defaultMd: DEFAULT_MD, projNotesDir: projStore },
       );
       state.size = size;
       state.zoom = zoom;
@@ -397,7 +430,7 @@ export function activate(activation: ActivationContext) {
       const dim = SIZES[size] ?? { w: 640, h: 560 };
       let payload: Payload | null = null;
       // On a reopen the modal can momentarily refuse (the previous one is still
-      // closing), so retry a few times before giving up — otherwise a resize or
+      // closing), so retry a few times before giving up - otherwise a resize or
       // "bring notes" silently leaves the pad closed.
       const maxTries = reopening ? 4 : 1;
       for (let attempt = 1; attempt <= maxTries; attempt++) {
@@ -418,11 +451,17 @@ export function activate(activation: ActivationContext) {
       if (payload.size) size = payload.size;
       if (typeof payload.zoom === "number") zoom = payload.zoom;
 
-      // Bring notes from the last project, then reopen showing them. Edits made
-      // on the placeholder note aren't persisted here — the offer only appears
+      // Bring notes from the offer source, then reopen showing them. Edits made
+      // on the placeholder note aren't persisted here - the offer only appears
       // on an empty project, so there's nothing worth keeping.
       if (payload.action === "bring" && offer && root) {
-        const dest = bringNotes(projectNotesDir(offer.fromPath), projectNotesDir(root));
+        // Staging IS the notes dir; a project source needs its Session Notes subdir.
+        const fromStaging = offer.fromPath === stagingDir;
+        const fromDir = fromStaging ? stagingDir : projectNotesDir(offer.fromPath);
+        const dest = bringNotes(fromDir, projectNotesDir(root));
+        // Staged notes now have a real home - empty the holding area so they don't
+        // haunt the next empty project you open.
+        if (fromStaging) applyDeletes(stagingDir, listMd(stagingDir));
         const next: SavedState = { ...st, size, zoom };
         if (dest) next.current = "p:" + dest;
         writeState(next);
@@ -435,7 +474,7 @@ export function activate(activation: ActivationContext) {
       // those lines aren't lost.
       if (payload.action === "timeline") {
         try {
-          persist(payload, root, notebooksDir);
+          persist(payload, root, notebooksDir, projStore);
         } catch (e) {
           dbg("persist failed (timeline)", String(e));
         }
@@ -448,11 +487,11 @@ export function activate(activation: ActivationContext) {
       }
 
       // Persist on save AND resize, so resizing never drops in-progress edits.
-      // Guard it — a failed write must not throw out of the loop and stop a resize
+      // Guard it - a failed write must not throw out of the loop and stop a resize
       // from reopening the pad.
       if (payload.action === "save" || payload.action === "resize") {
         try {
-          persist(payload, root, notebooksDir);
+          persist(payload, root, notebooksDir, projStore);
         } catch (e) {
           dbg("persist failed", String(e));
         }
@@ -460,11 +499,11 @@ export function activate(activation: ActivationContext) {
 
       const dismissed = new Set(st.dismissed || []);
       if (payload.dismissMigration && root) dismissed.add(root);
-      // Remember the project we just took notes in as THIS session's offer source
-      // for a later Save-As. Includes temp/unsaved projects — their notes should
-      // carry into the saved project — but only in memory, so it never persists
-      // across restarts to nag unrelated future projects.
-      if (root && listMd(projectNotesDir(root)).length > 0)
+      // Remember the SAVED project we just took notes in as THIS session's offer
+      // source for a later Save-As (one saved project to another). Unsaved Sets are
+      // handled by staging instead, so skip them here - their notes live in
+      // `stagingDir`, not `projectNotesDir(root)`, which stays empty.
+      if (root && !transient && listMd(projectNotesDir(root)).length > 0)
         sessionSource = { path: root, name: path.basename(root) };
 
       const next: SavedState = { size, zoom, dismissed: [...dismissed] };

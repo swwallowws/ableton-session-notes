@@ -1,4 +1,4 @@
-// Headless tests for the pure note logic in src/notes.ts — no Ableton needed.
+// Headless tests for the pure note logic in src/notes.ts - no Ableton needed.
 // Run with: npm test
 import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
@@ -154,6 +154,42 @@ test("global notebooks persist independently of the project", () => {
   assert.deepEqual(listMd(notebooks()), ["Global"]);
 });
 
+// ---- unsaved-Set staging ----
+// An unsaved Set resolves to a throwaway temp project Ableton may delete. The host
+// passes a staging dir so notes land in our own data dir instead of that folder.
+const staging = () => path.join(tmp, "Unsaved Notes");
+
+test("staging: persist writes to the override dir, never the temp project folder", () => {
+  fresh();
+  const temp = project("2026-07-07 230052 Temp"); // an unsaved-Set temp project
+  persist(save({ Session: "jot" }), temp, notebooks(), staging());
+  assert.deepEqual(listMd(staging()), ["Session"]);
+  assert.equal(readFile(mdPath(staging(), "Session")), "jot");
+  assert.equal(hasFolder(temp), false, "must not write into the temp project folder");
+});
+
+test("staging: notes survive deleting the temp project (the reported bug)", () => {
+  fresh();
+  const temp = project("Untitled"); // -> "Untitled Project"
+  persist(save({ Session: "keep me" }), temp, notebooks(), staging());
+  fs.rmSync(temp, { recursive: true, force: true }); // Ableton "Delete temp files"
+  assert.deepEqual(listMd(staging()), ["Session"]);
+  assert.equal(readFile(mdPath(staging(), "Session")), "keep me");
+});
+
+test("staging: buildState reads staged notes but still shows the Set as unsaved", () => {
+  fresh();
+  const temp = project("Untitled"); // -> "Untitled Project"
+  fs.mkdirSync(staging(), { recursive: true });
+  fs.writeFileSync(mdPath(staging(), "Session"), "staged", "utf8");
+  const st = buildState(temp, null, { notebooksDir: notebooks(), saved: {}, defaultMd: D, projNotesDir: staging() });
+  assert.equal(st.hasProject, true);
+  assert.equal(st.projectNotesDir, staging());
+  assert.equal(st.projectName, "Untitled Project", "name drives the 'unsaved' hint in the UI");
+  assert.deepEqual(Object.keys(st.projectNotes), ["Session"]);
+  assert.equal(st.projectNotes["Session"], "staged");
+});
+
 // ---- stale-write guard ----
 test("guard: vanished project folder recovers edits to globals, no ghost folder", () => {
   fresh();
@@ -215,13 +251,13 @@ test("no offer when landing IN a transient project, but a temp project IS a vali
   const a = project("A");
   writeNote(a, "x", "1");
   // Landing in a brand-new unsaved Set ("Untitled Project" or a timestamped
-  // "… Temp Project") must never nag — you don't pull notes into a throwaway.
+  // "… Temp Project") must never nag - you don't pull notes into a throwaway.
   const untitled = path.join(tmp, "Untitled Project");
   fs.mkdirSync(path.join(untitled, "Ableton Project Info"), { recursive: true });
   const temp = project("2026-07-07 230052 Temp"); // -> "…2026-07-07 230052 Temp Project"
   assert.equal(migrationOffer(untitled, { lastProject: { path: a, name: "A Project" } }), null);
   assert.equal(migrationOffer(temp, { lastProject: { path: a, name: "A Project" } }), null);
-  // But notes taken in a temp project SHOULD be offerable into a saved project —
+  // But notes taken in a temp project SHOULD be offerable into a saved project -
   // the Save-As-then-keep-temp-files flow. The temp project is a valid source.
   writeNote(temp, "scratch", "s");
   const saved = project("Saved");

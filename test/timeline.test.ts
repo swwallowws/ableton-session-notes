@@ -33,7 +33,7 @@ const test = (name: string, fn: () => void) => {
 console.log("timeline.ts");
 
 test("extractLyricLines: a note with no position tags yields no lyrics", () => {
-  // Tagging is required now — an untagged note is treated as ordinary prose.
+  // Tagging is required now - an untagged note is treated as ordinary prose.
   assert.deepEqual(extractLyricLines("Walking in the rain\nWith you tonight"), []);
 });
 
@@ -54,7 +54,7 @@ test("extractLyricLines: one tag at the top pulls the whole block (rest flow)", 
 test("extractLyricLines (tagged blocks): a tagged line starts a block, untagged lines flow", () => {
   const md = "# Ideas\nfix the bridge\n\n[1] Walking in the rain\nwith you tonight\n[5] Under the neon light\n\n- [ ] mix down vocals";
   // "fix the bridge" and the to-do are prose (outside a block); the three lyric
-  // lines — including the untagged flow line — are kept, tags intact.
+  // lines - including the untagged flow line - are kept, tags intact.
   assert.deepEqual(extractLyricLines(md), [
     "[1] Walking in the rain",
     "with you tonight",
@@ -179,7 +179,7 @@ test("buildClips: timed lines span to the next line's beat", () => {
 });
 
 test("buildClips: untagged input falls back to proportional widths", () => {
-  // "aaaa" gets twice the width of "aa" — the branch-1 heuristic still applies
+  // "aaaa" gets twice the width of "aa" - the branch-1 heuristic still applies
   // when there are no timing tags to drive real durations.
   const clips = buildClips(["aaaa", "aa"]);
   assert.ok(Math.abs(clips[0]!.duration - 2 * clips[1]!.duration) < 1e-9);
@@ -261,7 +261,7 @@ test("evalExpr: malformed input → null (no throw, no eval)", () => {
 
 test("evalExpr: stray characters are rejected, not silently dropped", () => {
   // The tokenizer only collects matches, so a stray char would vanish and the
-  // rest would evaluate — these must be null, not a confident wrong number.
+  // rest would evaluate - these must be null, not a confident wrong number.
   assert.equal(evalExpr("100@"), null);
   assert.equal(evalExpr("8*!4"), null);
   assert.equal(evalExpr("2 & 3"), null);

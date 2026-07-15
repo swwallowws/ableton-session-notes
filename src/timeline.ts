@@ -1,17 +1,17 @@
 // Pure planning logic for placing a note's lyric lines onto the Live arrangement
-// timeline — no SDK/Live dependency, so it's unit-testable headlessly. The host
+// timeline - no SDK/Live dependency, so it's unit-testable headlessly. The host
 // (extension.ts) feeds the resulting plan to the data model as either cue points
 // (locators) or named clips on a dedicated track.
 //
 // Everything here is deterministic and in BEATS. There is intentionally no notion
-// of "the playhead" — the SDK exposes no transport position, so placement is
+// of "the playhead" - the SDK exposes no transport position, so placement is
 // anchored to a start beat, not to where you happen to be playing.
 
 // Pull the "singable" lines out of a Markdown note: drop blank lines, headings,
 // horizontal rules, the seeded ♪ placeholder, and strip a leading list/checkbox
 // marker so "- [ ] word" or "* word" becomes "word". Everything else counts as a
 // lyric line.
-// Does a line carry a leading [tag] SHAPED like a position tag — musical
+// Does a line carry a leading [tag] SHAPED like a position tag - musical
 // (`[17]`, `[17.3]`), clock (`[1:04]`), or expression (`[=8*4]`)? This is
 // bpm-independent on purpose: it asks "does this line use the timing notation",
 // not "does it resolve to a beat", so the webview (which doesn't know the tempo)
@@ -34,7 +34,7 @@ const cleanLyricLine = (raw: string): string | null => {
 // Pull the lyric lines out of a note using "tagged blocks": a line with a
 // position tag starts a lyric block, untagged lines directly beneath it flow as
 // lyrics, and a blank line or heading ends the block. Prose outside a block is
-// ignored — so lyrics, notes and to-dos can live in one file. A note with no
+// ignored - so lyrics, notes and to-dos can live in one file. A note with no
 // position tags yields no lyrics (tag at least one line; the rest flow from it).
 export const extractLyricLines = (md: string): string[] => {
   const cleaned = (md || "").replace(/\r\n?/g, "\n").split("\n").map(cleanLyricLine);
@@ -106,8 +106,8 @@ export const planClips = (
 // ---- inline timing tags -----------------------------------------------------
 // A lyric line may carry a leading [..] tag saying WHERE it goes, so lyrics are
 // placed at real positions instead of evenly. Supported tags:
-//   musical: [bar] | [bar.beat] | [bar.beat.sixteenth]  — 1-indexed, 4/4 assumed
-//   clock:   [m:ss] | [m:ss.frac]                        — seconds, → beats via bpm
+//   musical: [bar] | [bar.beat] | [bar.beat.sixteenth]  - 1-indexed, 4/4 assumed
+//   clock:   [m:ss] | [m:ss.frac]                        - seconds, → beats via bpm
 // Musical tags are tempo-map-proof (Live maps beats→time itself); clock tags rely
 // on a constant tempo (the SDK exposes no tempo map). beatsPerBar defaults to 4
 // because the SDK doesn't expose the arrangement time signature.
@@ -121,7 +121,7 @@ export type TimingOpts = {
   bpm?: number;
 };
 
-// A tiny, safe arithmetic evaluator for the `[=…]` expression tag — supports
+// A tiny, safe arithmetic evaluator for the `[=…]` expression tag - supports
 // `+ - * /`, parentheses, unary minus, decimals, and named variables (we pass
 // `bpm`). No eval(): a hand-rolled recursive-descent parser. Returns the number,
 // or null on any malformed input or unknown identifier.
@@ -270,8 +270,8 @@ export const buildClips = (
   // Sort by beat so gaps are computed against the next clip on the timeline.
   const sorted = [...timed].sort((a, b) => a.beat - b.beat);
   const clips: ClipPlan[] = [];
-  // Clips can't overlap on an arrangement track — a later clip trims/overwrites
-  // an earlier one — so when two lines resolve to the same (or too-close) beat,
+  // Clips can't overlap on an arrangement track - a later clip trims/overwrites
+  // an earlier one - so when two lines resolve to the same (or too-close) beat,
   // start the later clip where the previous one ends rather than on top of it.
   let prevEnd = -Infinity;
   for (let i = 0; i < sorted.length; i++) {
@@ -287,11 +287,11 @@ export const buildClips = (
 };
 
 // A locator (cue point) can't share an exact beat with another. When a lyric
-// locator would land on an already-occupied beat — the user's own marker, or an
-// earlier line placed this pass — nudge it forward by a tiny epsilon until it's
+// locator would land on an already-occupied beat - the user's own marker, or an
+// earlier line placed this pass - nudge it forward by a tiny epsilon until it's
 // free, so nothing is dropped and no existing marker gets overwritten. Returns
 // the resolved beat per input, in order.
-export const NUDGE_BEATS = 1 / 32; // a hair — ~2ms at 120 BPM, still visibly adjacent
+export const NUDGE_BEATS = 1 / 32; // a hair - ~2ms at 120 BPM, still visibly adjacent
 
 export const placeWithoutCollision = (
   beats: number[],

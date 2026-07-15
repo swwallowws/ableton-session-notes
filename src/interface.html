@@ -150,8 +150,6 @@
         background: var(--bg); color: var(--text); line-height: 1.6;
         font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--note-font, 13px);
       }
-      .set-hint { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
-      .set-hint code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
       /* Segmented control for window size. */
       .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
       .seg button {
@@ -200,9 +198,16 @@
         height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
         background: var(--surface); flex: 0 0 auto; user-select: none;
       }
-      /* Zen Mode: hide the bottom toolbar for distraction-free writing (⇧⌘H).
-         Esc / ⌘S still save. */
+      /* Zen Mode: hide the bottom toolbar for distraction-free writing (⌥⌘Z).
+         Esc / ⌘S still save. A brief hint on entry says how to get back. */
       body.zen .bar { display: none; }
+      .zen-hint {
+        position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+        background: #14161a; color: var(--text); border: 1px solid var(--line);
+        padding: 5px 12px; border-radius: 14px; font-size: 11px; white-space: nowrap;
+        opacity: 0; transition: opacity 0.35s; pointer-events: none; z-index: 30;
+      }
+      .zen-hint.show { opacity: 1; }
       /* Note picker + tools on the left, actions on the right; space-between keeps
          a gap in the middle and respects the bar padding so Revert/Done stay clear
          of the edge. The fixed-width select keeps the left group from overflowing. */
@@ -309,6 +314,8 @@
       </div>
     </div>
 
+    <div class="zen-hint" id="zenHint"></div>
+
     <div class="help" id="settings" hidden>
       <div class="help-card">
         <div class="help-top">
@@ -317,20 +324,18 @@
         </div>
         <div class="set-row">
           <div class="set-head">
-            <label for="fontRange">Text size</label>
+            <label for="fontRange" class="tip-left" data-tip="Step ⌘+ / ⌘−, reset ⌘0">Text size</label>
             <span class="set-val"><span id="fontVal">13</span> px <button id="fontReset" class="linkbtn" type="button">Reset</button></span>
           </div>
           <input id="fontRange" class="range" type="range" min="10" max="28" step="1" value="13" aria-label="Text size in pixels" />
           <div class="set-preview" id="fontPreview">Walking in the rain with you tonight</div>
-          <p class="set-hint">Or press ⌘+ / ⌘− to step, ⌘0 to reset.</p>
         </div>
         <div class="set-row">
-          <div class="set-head"><label>Window size</label></div>
+          <div class="set-head"><label class="tip-left" data-tip="Reopens the pad at this size">Window size</label></div>
           <div class="seg" id="winSize" role="group" aria-label="Window size">
             <button type="button" data-size="s">Compact</button>
             <button type="button" data-size="m">Regular</button>
           </div>
-          <p class="set-hint">Reopens the pad at the chosen size.</p>
         </div>
       </div>
     </div>
@@ -341,7 +346,7 @@
           <strong>Markdown &amp; lyric timing</strong>
           <button id="helpClose" class="icon ghost" aria-label="Close help">✕</button>
         </div>
-        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View. Change the text size in <b>Settings</b> or with <b>⌘+ / ⌘− / ⌘0</b>. <b>Zen Mode</b> (<b>⇧⌘H</b>) hides the toolbar for distraction-free writing.</p>
+        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View. Text size lives in <b>Settings</b> (or <b>⌘+ / ⌘− / ⌘0</b>). <b>Zen Mode</b> (<b>⌥⌘Z</b>) hides the toolbar.</p>
         <table class="help-cheat">
           <thead><tr><th>type this</th><th>see this</th></tr></thead>
           <tbody id="cheatBody"></tbody>
@@ -376,7 +381,7 @@
       // text hints must match the OS. The host tells us via STATE.mac; default to
       // Mac if unknown. K() rewrites the ⌘ glyphs in a string for Windows.
       const MAC = !(STATE && STATE.mac === false);
-      const WINMAP = [["⇧⌘H", "Ctrl+Shift+H"], ["⌘+ / ⌘− / ⌘0", "Ctrl +/− and Ctrl 0"], ["⌘+ / ⌘−", "Ctrl +/−"], ["⌘E", "Ctrl+E"], ["⌘S", "Ctrl+S"], ["⌘", "Ctrl"]];
+      const WINMAP = [["⌥⌘Z", "Ctrl+Alt+Z"], ["⌘+ / ⌘− / ⌘0", "Ctrl +/− and Ctrl 0"], ["⌘+ / ⌘−", "Ctrl +/−"], ["⌘E", "Ctrl+E"], ["⌘S", "Ctrl+S"], ["⌘", "Ctrl"]];
       function K(s) { if (MAC || !s) return s; let r = s; for (const p of WINMAP) r = r.split(p[0]).join(p[1]); return r; }
       if (!MAC) {
         document.querySelectorAll("[data-tip]").forEach((el) => { if (el.dataset.tip) el.dataset.tip = K(el.dataset.tip); });
@@ -724,6 +729,21 @@
         post("resize", b.dataset.size);
       });
 
+      // ---- Zen Mode toggle + entry hint (so the toolbar is never lost) ----
+      const zenHint = document.getElementById("zenHint");
+      let zenTimer = null;
+      function toggleZen() {
+        const on = document.body.classList.toggle("zen");
+        clearTimeout(zenTimer);
+        if (on) {
+          zenHint.textContent = K("Zen · ⌥⌘Z to exit");
+          zenHint.classList.add("show");
+          zenTimer = setTimeout(() => zenHint.classList.remove("show"), 2200);
+        } else {
+          zenHint.classList.remove("show");
+        }
+      }
+
       // ---- "bring notes from another project" offer (after a Save As) ----
       let dismissedMigration = false;
       const migrate = document.getElementById("migrate");
@@ -750,9 +770,8 @@
         tlLines = extractLyricLinesJS(pad.value);
         const n = tlLines.length;
         tltext.textContent = n
-          ? "Send " + n + (n === 1 ? " line" : " lines") +
-            " to the timeline (see ? for timing tags):"
-          : "No tagged lyrics yet. Add a position like [1] to a line (see ?).";
+          ? "Send " + n + (n === 1 ? " line" : " lines") + " to the timeline:"
+          : "No tagged lyrics yet. Tag a line like [1].";
         document.getElementById("tlloc").disabled = !n;
         document.getElementById("tlclip").disabled = !n;
         tlbar.hidden = false;
@@ -932,10 +951,10 @@
           return;
         }
         if (mod && k === "e") { e.preventDefault(); setMode(!editing); return; }
-        // Zen Mode: hide the bottom toolbar for distraction-free writing (⇧⌘H /
-        // Ctrl+Shift+H; ⌘H alone is macOS "Hide App"). Session-only — the toolbar
-        // returns when the pad reopens.
-        if (mod && e.shiftKey && k === "h") { e.preventDefault(); document.body.classList.toggle("zen"); return; }
+        // Zen Mode: hide the bottom toolbar for distraction-free writing. ⌥⌘Z /
+        // Ctrl+Alt+Z — NOT ⌘Z (undo) or ⇧⌘Z (redo), which must keep working in the
+        // note. Keyed on e.code because ⌥Z types "Ω" on macOS. Session-only.
+        if (mod && e.altKey && e.code === "KeyZ") { e.preventDefault(); toggleZen(); return; }
         // Text zoom: ⌘+ / ⌘= to grow, ⌘- to shrink, ⌘0 to reset.
         if (mod && (k === "=" || k === "+")) { e.preventDefault(); stepZoom(1); return; }
         if (mod && (k === "-" || k === "_")) { e.preventDefault(); stepZoom(-1); return; }

@@ -40,7 +40,7 @@ Settings and the built-in help are a button away:
 
 | Settings | Markdown & lyric-timing help |
 | :---: | :---: |
-| ![The settings panel with text size, window size, and Zen Mode](assets/screenshots/settings.png) | ![The lyric-timing help showing tag formats and where each one lands](assets/screenshots/md-help.png) |
+| ![The settings panel with text size, window size, and Zen Mode](assets/screenshots/settings.png) | ![The lyric-timing help showing tag formats and where each one lands](assets/screenshots/lyrics-help.png) |
 
 Try it yourself: paste this into a note, switch to **View**, then press the timeline button.
 

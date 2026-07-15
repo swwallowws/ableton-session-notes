@@ -124,6 +124,43 @@
         font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
         background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
       }
+      /* ---- settings panel ---- */
+      .set-row { margin-top: 16px; }
+      .set-row:first-of-type { margin-top: 4px; }
+      .set-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+      .set-head label { font-size: 13px; font-weight: 600; color: var(--text); }
+      .set-val { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+      .set-val #fontVal { color: var(--text); }
+      .linkbtn {
+        height: auto; padding: 0 0 0 8px; margin: 0; border: 0; background: transparent;
+        color: var(--accent); font: inherit; font-size: 11px; cursor: pointer;
+      }
+      .linkbtn:hover { text-decoration: underline; background: transparent; }
+      /* Flat slider matching Live's controls. */
+      .range {
+        -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+        background: var(--field); border: 1px solid var(--line); border-radius: 3px; outline: 0; cursor: pointer;
+      }
+      .range::-webkit-slider-thumb {
+        -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%;
+        background: var(--accent); border: 1px solid var(--line); cursor: pointer;
+      }
+      .set-preview {
+        margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px;
+        background: var(--bg); color: var(--text); line-height: 1.6;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--note-font, 13px);
+      }
+      .set-hint { margin: 8px 0 0; font-size: 11px; color: var(--muted); }
+      .set-hint code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+      /* Segmented control for window size. */
+      .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+      .seg button {
+        height: 26px; padding: 0 14px; border: 0; border-radius: 0; background: var(--field);
+        color: var(--text); font: inherit; cursor: pointer;
+      }
+      .seg button + button { border-left: 1px solid var(--line); }
+      .seg button:hover { background: var(--field-hover); }
+      .seg button.on { background: var(--accent); color: var(--bg); }
       .migrate {
         flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
         gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line);
@@ -253,8 +290,7 @@
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
           <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
           <button id="cornerTimeline" class="icon ghost tip-left" data-tip="Send lyrics to timeline" aria-label="Send lyrics to arrangement timeline"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 H15" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.4 V10.6 M8 5.4 V10.6 M12 5.4 V10.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-          <button id="cornerSize" class="icon ghost tip-left" data-tip="Resize" aria-label="Resize pad"></button>
-          <button id="zoomBtn" class="icon ghost tip-left" data-tip="Text size" aria-label="Text size (⌘+ / ⌘−)"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><text x="1.5" y="9" font-size="8" font-weight="600" fill="currentColor">A</text><text x="8.5" y="12.5" font-size="6" font-weight="600" fill="currentColor">A</text></svg></button>
+          <button id="settingsBtn" class="icon ghost tip-left" data-tip="Settings" aria-label="Settings"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.4 V3 M8 13 V14.6 M1.4 8 H3 M13 8 H14.6 M3.3 3.3 L4.4 4.4 M11.6 11.6 L12.7 12.7 M12.7 3.3 L11.6 4.4 M4.4 11.6 L3.3 12.7" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
           <button id="helpBtn" class="icon ghost tip-left" data-tip="Help & lyric timing" aria-label="Help and lyric timing">?</button>
         </span>
       </div>
@@ -265,13 +301,39 @@
       </div>
     </div>
 
+    <div class="help" id="settings" hidden>
+      <div class="help-card">
+        <div class="help-top">
+          <strong>Settings</strong>
+          <button id="settingsClose" class="icon ghost" aria-label="Close settings">✕</button>
+        </div>
+        <div class="set-row">
+          <div class="set-head">
+            <label for="fontRange">Text size</label>
+            <span class="set-val"><span id="fontVal">13</span> px <button id="fontReset" class="linkbtn" type="button">Reset</button></span>
+          </div>
+          <input id="fontRange" class="range" type="range" min="10" max="28" step="1" value="13" aria-label="Text size in pixels" />
+          <div class="set-preview" id="fontPreview">Walking in the rain with you tonight</div>
+          <p class="set-hint">Or press ⌘+ / ⌘− to step, ⌘0 to reset.</p>
+        </div>
+        <div class="set-row">
+          <div class="set-head"><label>Window size</label></div>
+          <div class="seg" id="winSize" role="group" aria-label="Window size">
+            <button type="button" data-size="s">Compact</button>
+            <button type="button" data-size="m">Regular</button>
+          </div>
+          <p class="set-hint">Reopens the pad at the chosen size.</p>
+        </div>
+      </div>
+    </div>
+
     <div class="help" id="help" hidden>
       <div class="help-card">
         <div class="help-top">
           <strong>Markdown &amp; lyric timing</strong>
           <button id="helpClose" class="icon ghost" aria-label="Close help">✕</button>
         </div>
-        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View. Change the text size with the <b>A</b> button or <b>⌘+ / ⌘− / ⌘0</b>.</p>
+        <p class="help-how">Write your note in <b>Markdown</b>, then switch to <b>View</b> (the ✎ / 👁 button, or <b>⌘E</b>) to see it formatted. Checkboxes are clickable in View. Change the text size in <b>Settings</b> (the gear) or with <b>⌘+ / ⌘− / ⌘0</b>.</p>
         <table class="help-cheat">
           <thead><tr><th>type this</th><th>see this</th></tr></thead>
           <tbody id="cheatBody"></tbody>
@@ -311,7 +373,7 @@
       if (!MAC) {
         document.querySelectorAll("[data-tip]").forEach((el) => { if (el.dataset.tip) el.dataset.tip = K(el.dataset.tip); });
         document.querySelectorAll("[aria-label]").forEach((el) => { const a = el.getAttribute("aria-label"); if (a) el.setAttribute("aria-label", K(a)); });
-        const hc = document.querySelector(".help-card"); if (hc) hc.innerHTML = K(hc.innerHTML);
+        document.querySelectorAll(".help-card").forEach((hc) => { hc.innerHTML = K(hc.innerHTML); });
       }
 
       const pad = document.getElementById("pad");
@@ -615,38 +677,44 @@
 
       setMode(false); // render by default
 
-      // ---- size toggle. Two presets (m = default, s = compact). The SDK dialog
-      // can't resize once open, so the toggle closes the pad and the host reopens
-      // it at the other size. The icon shows which way it'll go. ----
-      const ICON_GROW = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2 H14 V6.5 M14 2 L9.3 6.7 M6.5 14 H2 V9.5 M2 14 L6.7 9.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      const ICON_SHRINK = '<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 3 L8.8 7.2 M8.8 3.2 V7.2 H12.8 M3 13 L7.2 8.8 M7.2 12.8 V8.8 H3.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      const sizeToggle = document.getElementById("cornerSize");
-      const curSize = (STATE && STATE.size) || "m";
-      const bigger = curSize !== "m";   // if compact, next tap grows; else shrinks
-      sizeToggle.innerHTML = bigger ? ICON_GROW : ICON_SHRINK;
-      sizeToggle.dataset.tip = bigger ? "Larger" : "Smaller";
-      sizeToggle.addEventListener("click", () => post("resize", bigger ? "m" : "s"));
-
-      // ---- note text size (zoom). Unlike the window size, this applies live in
-      // the webview (a CSS var) — no reopen needed — and rides along in the post
-      // payload so the host persists it. Click cycles up (wrapping); ⌘+ / ⌘− step,
-      // ⌘0 resets. ----
-      const ZOOM_LEVELS = [11, 12, 13, 15, 17, 20], ZOOM_DEFAULT = 13;
-      let notePx = (STATE && STATE.zoom) || ZOOM_DEFAULT;   // 0 / undefined → default
-      const zoomBtn = document.getElementById("zoomBtn");
-      function zoomIndex() {
-        let i = ZOOM_LEVELS.indexOf(notePx);
-        if (i < 0) { let best = Infinity; for (let k = 0; k < ZOOM_LEVELS.length; k++) { const d = Math.abs(ZOOM_LEVELS[k] - notePx); if (d < best) { best = d; i = k; } } }
-        return i < 0 ? 0 : i;
-      }
+      // ---- note text size (zoom) — a continuous px value (ZOOM_MIN..ZOOM_MAX),
+      // set from the Settings slider or ⌘+ / ⌘− / ⌘0. Applies live via a CSS var
+      // and rides the post payload so the host persists it. ----
+      const ZOOM_MIN = 10, ZOOM_MAX = 28, ZOOM_DEFAULT = 13;
+      const clampPx = (px) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(px)));
+      let notePx = clampPx((STATE && STATE.zoom) || ZOOM_DEFAULT); // 0 / undefined → default
+      const fontRange = document.getElementById("fontRange");
+      const fontVal = document.getElementById("fontVal");
       function applyZoom() {
         document.documentElement.style.setProperty("--note-font", notePx + "px");
-        zoomBtn.dataset.tip = K("Text size " + (zoomIndex() + 1) + "/" + ZOOM_LEVELS.length + " (⌘+ / ⌘−)");
+        fontVal.textContent = notePx;
+        if (fontRange.value !== String(notePx)) fontRange.value = notePx;
       }
-      function setZoomIndex(i) { notePx = ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, i))]; applyZoom(); }
-      function stepZoom(dir) { setZoomIndex(zoomIndex() + dir); }
-      zoomBtn.addEventListener("click", () => setZoomIndex((zoomIndex() + 1) % ZOOM_LEVELS.length));
+      function setZoom(px) { notePx = clampPx(px); applyZoom(); }
+      function stepZoom(dir) { setZoom(notePx + dir); }
+      fontRange.min = ZOOM_MIN; fontRange.max = ZOOM_MAX;
+      fontRange.addEventListener("input", () => setZoom(+fontRange.value));
+      document.getElementById("fontReset").addEventListener("click", () => setZoom(ZOOM_DEFAULT));
       applyZoom();
+
+      // ---- settings panel (gear) ----
+      const settingsPanel = document.getElementById("settings");
+      const winSeg = document.getElementById("winSize");
+      function markWinSize() {
+        const cur = (STATE && STATE.size) || "m";
+        winSeg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.size === cur));
+      }
+      const closeSettings = () => { settingsPanel.hidden = true; };
+      document.getElementById("settingsBtn").addEventListener("click", () => { markWinSize(); settingsPanel.hidden = false; });
+      document.getElementById("settingsClose").addEventListener("click", closeSettings);
+      settingsPanel.addEventListener("click", (e) => { if (e.target === settingsPanel) closeSettings(); });
+      // Window size can't change in place — post a resize so the host reopens the
+      // pad at the new size (persisting the current zoom/edits first via post()).
+      winSeg.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-size]");
+        if (!b || b.classList.contains("on")) return;
+        post("resize", b.dataset.size);
+      });
 
       // ---- "bring notes from another project" offer (after a Save As) ----
       let dismissedMigration = false;
@@ -843,6 +911,7 @@
         const mod = e.metaKey || e.ctrlKey;
         const k = e.key.toLowerCase();
         if (e.key === "Escape" && !helpPanel.hidden) { e.preventDefault(); closeHelp(); return; }
+        if (e.key === "Escape" && !settingsPanel.hidden) { e.preventDefault(); closeSettings(); return; }
         if (mod && (k === "s" || k === "w")) { e.preventDefault(); post("save"); return; }
         if (e.key === "Escape") {
           // Back out of a transient bottom strip first, rather than saving/closing.
@@ -858,7 +927,7 @@
         // Text zoom: ⌘+ / ⌘= to grow, ⌘- to shrink, ⌘0 to reset.
         if (mod && (k === "=" || k === "+")) { e.preventDefault(); stepZoom(1); return; }
         if (mod && (k === "-" || k === "_")) { e.preventDefault(); stepZoom(-1); return; }
-        if (mod && k === "0") { e.preventDefault(); setZoomIndex(ZOOM_LEVELS.indexOf(ZOOM_DEFAULT)); return; }
+        if (mod && k === "0") { e.preventDefault(); setZoom(ZOOM_DEFAULT); return; }
       });
       window.addEventListener("beforeunload", () => post("save")); // save if closed another way
     </script>

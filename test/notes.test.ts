@@ -12,6 +12,7 @@ import {
   migrateLegacyProjectNote,
   migrateNotebooksDir,
   projectNotesDir,
+  resolveSetName,
   listMd,
   mdPath,
   readFile,
@@ -263,6 +264,56 @@ test("no offer when landing IN a transient project, but a temp project IS a vali
   const saved = project("Saved");
   const offer = migrationOffer(saved, { lastProject: { path: temp, name: path.basename(temp) } });
   assert.ok(offer && offer.fromPath === temp && offer.count === 1, "temp project should be offerable");
+});
+
+// ---- resolveSetName ----
+const writeAls = (root: string, name: string) =>
+  fs.writeFileSync(path.join(root, name + ".als"), "", "utf8");
+
+test("resolveSetName returns null when no .als is present", () => {
+  fresh();
+  assert.equal(resolveSetName(project("Song")), null);
+});
+
+test("resolveSetName uses the sole .als, even when it differs from the folder", () => {
+  fresh();
+  const root = project("Song"); // folder is "Song Project"
+  writeAls(root, "Song");
+  assert.equal(resolveSetName(root), "Song");
+});
+
+test("resolveSetName prefers the .als whose basename matches the folder", () => {
+  fresh();
+  const root = project("Song");
+  const folder = path.basename(root); // "Song Project"
+  writeAls(root, folder);
+  writeAls(root, "Backup");
+  assert.equal(resolveSetName(root), folder);
+});
+
+test("resolveSetName gives up on multiple Sets with no folder match", () => {
+  fresh();
+  const root = project("Song");
+  writeAls(root, "Verse");
+  writeAls(root, "Chorus");
+  assert.equal(resolveSetName(root), null);
+});
+
+test("buildState labels the project with the resolved Set name", () => {
+  fresh();
+  const root = project("Song"); // folder "Song Project"
+  writeAls(root, "Song");
+  const st = buildState(root, null, { notebooksDir: notebooks(), saved: {}, defaultMd: D });
+  assert.equal(st.projectName, "Song");
+});
+
+test("buildState falls back to the folder name when the Set is ambiguous", () => {
+  fresh();
+  const root = project("Song");
+  writeAls(root, "Verse");
+  writeAls(root, "Chorus");
+  const st = buildState(root, null, { notebooksDir: notebooks(), saved: {}, defaultMd: D });
+  assert.equal(st.projectName, "Song Project");
 });
 
 // ---- bring notes ----

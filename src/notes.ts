@@ -59,6 +59,27 @@ export const listMd = (dir: string): string[] => {
 
 export const projectNotesDir = (root: string) => path.join(root, "Session Notes");
 
+// The SDK never hands us the open .als path, so we recover the Set's own name
+// from the project folder: the .als whose basename matches the folder, or the
+// sole .als when there's only one. Returns null when it's ambiguous (several
+// Sets, no match) so callers keep the folder name as the label. Note the label
+// only - project notes stay available either way.
+// Heuristic contributed by Axel LoganMolbert (PR #1).
+export const resolveSetName = (root: string): string | null => {
+  let als: string[];
+  try {
+    als = fs.readdirSync(root).filter((f) => f.toLowerCase().endsWith(".als"));
+  } catch {
+    return null;
+  }
+  if (!als.length) return null;
+  const folder = path.basename(root);
+  const match = als.find((f) => path.basename(f, ".als") === folder);
+  if (match) return path.basename(match, ".als");
+  if (als.length === 1 && als[0]) return path.basename(als[0], ".als");
+  return null;
+};
+
 // Ableton parks a not-yet-saved Set in a throwaway project folder: either
 // "Untitled Project" or a timestamped "… Temp Project" under Live Recordings
 // (the latter is what the import-probe creates for an audio-less unsaved Set).
@@ -219,7 +240,7 @@ export const buildState = (
   if (root) {
     // Staging keeps its own flat folder; only a real project has a legacy note.
     if (!opts.projNotesDir) migrateLegacyProjectNote(root);
-    projectName = path.basename(root);
+    projectName = resolveSetName(root) ?? path.basename(root);
     projectDir = root;
     projNotesDir = opts.projNotesDir ?? projectNotesDir(root);
     for (const n of listMd(projNotesDir))

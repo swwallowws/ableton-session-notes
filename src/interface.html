@@ -139,8 +139,9 @@
       .set-head label { font-size: 13px; font-weight: 600; color: var(--text); }
       .set-val { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
       .set-val #fontVal { color: var(--text); }
+      .font-row { display: flex; align-items: center; gap: 10px; }
       .linkbtn {
-        height: auto; padding: 0 0 0 8px; margin: 0; border: 0; background: transparent;
+        height: auto; padding: 0; margin: 0; border: 0; background: transparent;
         color: var(--accent); font: inherit; font-size: 11px; cursor: pointer;
       }
       .linkbtn:hover { text-decoration: underline; background: transparent; }
@@ -217,9 +218,6 @@
         transform: translateY(100%); transition: transform 0.18s ease;
       }
       body.zen.peek .dock { transform: none; }
-      /* A thin strip along the bottom edge that reveals the dock on hover. */
-      .zen-peek { display: none; }
-      body.zen .zen-peek { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: 12px; z-index: 24; }
       .zen-hint {
         position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
         background: #14161a; color: var(--text); border: 1px solid var(--line);
@@ -340,7 +338,6 @@
     </div>
     </div>
 
-    <div class="zen-peek" id="zenPeek"></div>
     <div class="zen-hint" id="zenHint"></div>
 
     <div class="help" id="settings" hidden>
@@ -352,9 +349,12 @@
         <div class="set-row">
           <div class="set-head">
             <span class="set-label"><label for="fontRange">Text size</label><span class="info tip-left" data-tip="Step with ⌘+ / ⌘−, reset with ⌘0" tabindex="0" role="img" aria-label="Text size shortcuts"></span></span>
-            <span class="set-val"><span id="fontVal">13</span> px <button id="fontReset" class="linkbtn" type="button">Reset</button></span>
           </div>
-          <input id="fontRange" class="range" type="range" min="10" max="28" step="1" value="13" aria-label="Text size in pixels" />
+          <div class="font-row">
+            <input id="fontRange" class="range" type="range" min="10" max="28" step="1" value="13" aria-label="Text size in pixels" />
+            <span class="set-val"><span id="fontVal">13</span> px</span>
+            <button id="fontReset" class="linkbtn" type="button">Reset</button>
+          </div>
           <div class="set-preview" id="fontPreview">within cells interlinked</div>
         </div>
         <div class="set-row">
@@ -794,14 +794,18 @@
       }
       // The Settings button is a real toggle: enters or exits Zen.
       zenBtn.addEventListener("click", () => { closeSettings(); toggleZen(); });
-      // In Zen Mode, hovering the bottom edge slides the whole dock (toolbar plus
-      // any open path / timeline bar) up temporarily; it slides back when the
-      // pointer leaves it.
+      // In Zen Mode, reveal the dock (toolbar plus any open path / timeline bar)
+      // as the pointer nears where the toolbar normally sits — its top edge, not
+      // just the very bottom of the screen. The band is at least the dock's own
+      // height, so a taller dock (a path/timeline bar open) stays revealed while
+      // the pointer is over it; moving back up past that band hides it again.
       const dock = document.getElementById("dock");
-      document.getElementById("zenPeek").addEventListener("mouseenter", () => {
-        if (isZen()) document.body.classList.add("peek");
+      const PEEK_BAND = 56;
+      document.addEventListener("mousemove", (e) => {
+        if (!isZen()) return;
+        const revealFrom = window.innerHeight - Math.max(PEEK_BAND, dock.offsetHeight + 10);
+        document.body.classList.toggle("peek", e.clientY >= revealFrom);
       });
-      dock.addEventListener("mouseleave", () => document.body.classList.remove("peek"));
 
       // ---- "bring notes from another project" offer (after a Save As) ----
       let dismissedMigration = false;

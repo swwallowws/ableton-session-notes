@@ -29,7 +29,9 @@ export type Payload = {
   globalDeletes?: string[];
 };
 
-export type Offer = { fromPath: string; fromName: string; count: number };
+// `fromStaging` marks an offer whose `fromPath` is a staging notes dir (read
+// directly), as opposed to a project root (read via its Session Notes subdir).
+export type Offer = { fromPath: string; fromName: string; count: number; fromStaging?: boolean };
 
 export const readFile = (p: string): string => {
   try {
@@ -78,6 +80,57 @@ export const resolveSetName = (root: string): string | null => {
   if (match) return path.basename(match, ".als");
   if (als.length === 1 && als[0]) return path.basename(als[0], ".als");
   return null;
+};
+
+// --- per-Set staging (unsaved Sets have no project folder yet) --------------
+// An unsaved Set's notes are staged in our own data dir until the Set is saved.
+// Staging is keyed by the transient project path so two different unsaved Sets
+// get separate subfolders and can't read each other's notes back (the
+// cross-project "bleed"); the SAME unsaved Set reopens to its own notes.
+// FNV-1a over the path -> a short, filesystem-safe, stable folder name.
+export const stagedRootKey = (root: string): string => {
+  let h = 2166136261;
+  for (let i = 0; i < root.length; i++) {
+    h ^= root.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return "s" + (h >>> 0).toString(36);
+};
+
+export const stagedNotesDir = (stagingDir: string, root: string): string =>
+  path.join(stagingDir, stagedRootKey(root));
+
+// The project-notes location the host reads AND writes for an open Set: a per-Set
+// staging subfolder while the Set is transient (unsaved), or undefined meaning
+// "<root>/Session Notes" once saved. Passed to both buildState and persist so
+// reads and writes always agree.
+export const stagingOverride = (
+  stagingDir: string,
+  root: string,
+  transient: boolean,
+): string | undefined => (transient ? stagedNotesDir(stagingDir, root) : undefined);
+
+// Candidate staged batches to offer when landing in a saved, empty project: each
+// per-Set subfolder, plus any legacy notes older versions wrote loose directly in
+// stagingDir. Callers filter by real (non-default) content and pick by recency.
+export const stagedBatches = (stagingDir: string): string[] => {
+  const dirs: string[] = [];
+  let entries: string[] = [];
+  try {
+    entries = fs.readdirSync(stagingDir);
+  } catch {
+    return dirs;
+  }
+  for (const e of entries) {
+    const full = path.join(stagingDir, e);
+    try {
+      if (fs.statSync(full).isDirectory()) dirs.push(full);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (listMd(stagingDir).length) dirs.push(stagingDir); // legacy loose files
+  return dirs;
 };
 
 // Ableton parks a not-yet-saved Set in a throwaway project folder: either

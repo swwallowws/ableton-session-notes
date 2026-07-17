@@ -17,6 +17,9 @@ import {
   bringNotes,
   isTransientProject,
   migrateNotebooksDir,
+  resolveSetName,
+  stagingOverride,
+  stagedBatches,
 } from "./notes.js";
 import { buildLocators, buildClips, placeWithoutCollision } from "./timeline.js";
 
@@ -115,15 +118,25 @@ export function activate(activation: ActivationContext) {
     return null;
   };
   const detectProjectRootFromSamples = (): string | null => {
+    const roots: string[] = [];
     try {
       for (const p of collectSamplePaths()) {
         const root = projectRootFromSample(p);
-        if (root) return root;
+        if (root && !roots.includes(root)) roots.push(root);
       }
     } catch {
       /* fall through */
     }
-    return null;
+    if (!roots.length) return null;
+    // A Set can reference samples living in more than one project (e.g. a temp
+    // Recordings folder alongside the real one). Prefer a SAVED project - one that
+    // isn't a transient temp folder and actually holds an .als - so a saved Set
+    // isn't mis-routed to staging just because a stray sample resolved first.
+    return (
+      roots.find((r) => !isTransientProject(r) && resolveSetName(r) !== null) ??
+      roots.find((r) => !isTransientProject(r)) ??
+      roots[0]!
+    );
   };
 
   const dbg = (...a: unknown[]) => {
@@ -380,7 +393,10 @@ export function activate(activation: ActivationContext) {
     // An unsaved Set resolves to a throwaway temp project. Stage its notes in our
     // own dir instead of that folder, so "Delete temp files" can't destroy them.
     const transient = !!root && isTransientProject(root);
-    const projStore = transient ? stagingDir : undefined;
+    // Keyed per transient path: each unsaved Set stages into its OWN subfolder, so
+    // different unsaved Sets never read each other's notes back, while the same Set
+    // reopens to its own. undefined once saved (writes go to <root>/Session Notes).
+    const projStore = stagingOverride(stagingDir, root ?? "", transient);
     let size = readState().size || "m";
     let zoom = readState().zoom || 0; // note text size in px (0 = default)
     // True right after we ask for a resize/bring reopen. The SDK can briefly refuse
@@ -394,22 +410,39 @@ export function activate(activation: ActivationContext) {
       const src: SavedState = { dismissed: st.dismissed ?? [] };
       if (sessionSource) src.lastProject = sessionSource;
       // Landing in a SAVED, empty project with notes waiting in staging means the
-      // user just saved the Set they were jotting in - offer to carry them over.
-      // Otherwise fall back to the in-session Save-As source (one saved project to
-      // another). `fromPath === stagingDir` marks the staging case for `bring`.
-      // Ignore an untouched seed: merely opening the pad in an unsaved Set writes
-      // the DEFAULT_MD template to staging, and that's not worth migrating (it would
-      // nag on every fresh project you save into).
-      const staged = listMd(stagingDir).filter(
-        (n) => readFile(mdPath(stagingDir, n)).trim() !== DEFAULT_MD.trim(),
-      );
-      const stagingOffer =
+      // user just saved the Set they were jotting in - offer to carry the most
+      // recent staged batch over. Otherwise fall back to the in-session Save-As
+      // source (one saved project to another). `fromStaging` marks the staging
+      // case for `bring`. Ignore untouched seeds: merely opening the pad in an
+      // unsaved Set writes the DEFAULT_MD template, which isn't worth migrating.
+      const realStaged = (dir: string) =>
+        listMd(dir).filter((n) => readFile(mdPath(dir, n)).trim() !== DEFAULT_MD.trim());
+      const pickStagedBatch = (): { dir: string; count: number } | null => {
+        let best: { dir: string; count: number; mtime: number } | null = null;
+        for (const dir of stagedBatches(stagingDir)) {
+          const real = realStaged(dir);
+          if (!real.length) continue;
+          let mtime = 0;
+          for (const n of real) {
+            try {
+              mtime = Math.max(mtime, fs.statSync(mdPath(dir, n)).mtimeMs);
+            } catch {
+              /* ignore */
+            }
+          }
+          if (!best || mtime > best.mtime) best = { dir, count: real.length, mtime };
+        }
+        return best ? { dir: best.dir, count: best.count } : null;
+      };
+      const batch =
         root && !transient &&
         listMd(projectNotesDir(root)).length === 0 &&
-        !(st.dismissed ?? []).includes(root) &&
-        staged.length > 0
-          ? { fromPath: stagingDir, fromName: "your previous session", count: staged.length }
+        !(st.dismissed ?? []).includes(root)
+          ? pickStagedBatch()
           : null;
+      const stagingOffer = batch
+        ? { fromPath: batch.dir, fromName: "your previous session", count: batch.count, fromStaging: true }
+        : null;
       const offer = stagingOffer ?? migrationOffer(root, src);
       const state = buildState(
         root,
@@ -417,7 +450,7 @@ export function activate(activation: ActivationContext) {
           // A temp/unsaved source (or staging) has no friendly name; the notes are
           // really from the session you were just in, so say that instead.
           fromName:
-            offer.fromPath === stagingDir || isTransientProject(offer.fromPath)
+            offer.fromStaging || isTransientProject(offer.fromPath)
               ? "your previous session"
               : offer.fromName,
           count: offer.count,
@@ -456,13 +489,24 @@ export function activate(activation: ActivationContext) {
       // on the placeholder note aren't persisted here - the offer only appears
       // on an empty project, so there's nothing worth keeping.
       if (payload.action === "bring" && offer && root) {
-        // Staging IS the notes dir; a project source needs its Session Notes subdir.
-        const fromStaging = offer.fromPath === stagingDir;
-        const fromDir = fromStaging ? stagingDir : projectNotesDir(offer.fromPath);
+        // A staging batch IS a notes dir; a project source needs its Session Notes
+        // subdir. `offer.fromPath` for staging is a per-Set subfolder (or, for
+        // legacy notes, stagingDir itself).
+        const fromStaging = !!offer.fromStaging;
+        const fromDir = fromStaging ? offer.fromPath : projectNotesDir(offer.fromPath);
         const dest = bringNotes(fromDir, projectNotesDir(root));
-        // Staged notes now have a real home - empty the holding area so they don't
-        // haunt the next empty project you open.
-        if (fromStaging) applyDeletes(stagingDir, listMd(stagingDir));
+        // Staged notes now have a real home - clear that batch so it stops being
+        // offered, and drop the now-empty per-Set subfolder (but keep stagingDir).
+        if (fromStaging) {
+          applyDeletes(offer.fromPath, listMd(offer.fromPath));
+          if (offer.fromPath !== stagingDir) {
+            try {
+              fs.rmdirSync(offer.fromPath);
+            } catch {
+              /* ignore - non-empty or already gone */
+            }
+          }
+        }
         const next: SavedState = { ...st, size, zoom };
         if (dest) next.current = "p:" + dest;
         writeState(next);
@@ -505,7 +549,7 @@ export function activate(activation: ActivationContext) {
       // handled by staging instead, so skip them here - their notes live in
       // `stagingDir`, not `projectNotesDir(root)`, which stays empty.
       if (root && !transient && listMd(projectNotesDir(root)).length > 0)
-        sessionSource = { path: root, name: path.basename(root) };
+        sessionSource = { path: root, name: resolveSetName(root) ?? path.basename(root) };
 
       const next: SavedState = { size, zoom, dismissed: [...dismissed] };
       const cur = payload.current || st.current;

@@ -13,6 +13,10 @@ import {
   migrateNotebooksDir,
   projectNotesDir,
   resolveSetName,
+  stagedRootKey,
+  stagedNotesDir,
+  stagingOverride,
+  stagedBatches,
   listMd,
   mdPath,
   readFile,
@@ -314,6 +318,71 @@ test("buildState falls back to the folder name when the Set is ambiguous", () =>
   writeAls(root, "Chorus");
   const st = buildState(root, null, { notebooksDir: notebooks(), saved: {}, defaultMd: D });
   assert.equal(st.projectName, "Song Project");
+});
+
+// ---- keyed staging (cross-project bleed regression) ----
+const stagingIn = () => path.join(tmp, "Unsaved Notes");
+
+test("stagedRootKey is stable, path-unique, and filesystem-safe", () => {
+  assert.equal(stagedRootKey("/x/A Temp Project"), stagedRootKey("/x/A Temp Project"));
+  assert.notEqual(stagedRootKey("/x/A Temp Project"), stagedRootKey("/x/B Temp Project"));
+  assert.ok(/^s[a-z0-9]+$/.test(stagedRootKey("/x/A Temp Project")), "no path separators in key");
+});
+
+test("stagingOverride keys by root when transient, undefined when saved", () => {
+  const staging = "/base/Unsaved Notes";
+  assert.equal(stagingOverride(staging, "/x/A Temp Project", false), undefined);
+  const a = stagingOverride(staging, "/x/A Temp Project", true);
+  const b = stagingOverride(staging, "/x/B Temp Project", true);
+  assert.ok(a && b && a !== b, "different unsaved Sets get different staging dirs");
+  assert.equal(a, stagedNotesDir(staging, "/x/A Temp Project"));
+});
+
+// The core repro: notes jotted in unsaved Set A must NOT surface in unsaved Set B.
+test("keyed staging: unsaved Set B does not see unsaved Set A's notes", () => {
+  fresh();
+  const staging = stagingIn();
+  const rootA = path.join(tmp, "A Temp Project");
+  const rootB = path.join(tmp, "B Temp Project");
+  // A (transient) writes a note -> its own keyed staging dir.
+  persist(save({ Session: "A LYRICS" }), rootA, notebooks(), stagingOverride(staging, rootA, true));
+  // B (transient) opens -> reads its OWN keyed dir, which is empty.
+  const stB = buildState(rootB, null, {
+    notebooksDir: notebooks(),
+    saved: { current: "p:Session" },
+    defaultMd: D,
+    projNotesDir: stagingOverride(staging, rootB, true),
+  });
+  assert.notEqual(stB.projectNotes["Session"], "A LYRICS"); // no bleed
+  assert.equal(stB.projectNotes["Session"], D); // fresh seed instead
+});
+
+test("keyed staging: the same unsaved Set reopens to its own notes", () => {
+  fresh();
+  const staging = stagingIn();
+  const rootA = path.join(tmp, "A Temp Project");
+  const storeA = stagingOverride(staging, rootA, true);
+  persist(save({ Session: "A LYRICS" }), rootA, notebooks(), storeA);
+  const stA = buildState(rootA, null, {
+    notebooksDir: notebooks(),
+    saved: { current: "p:Session" },
+    defaultMd: D,
+    projNotesDir: storeA,
+  });
+  assert.equal(stA.projectNotes["Session"], "A LYRICS"); // continuity, no friction
+});
+
+test("stagedBatches lists per-Set subfolders plus legacy loose files", () => {
+  fresh();
+  const staging = stagingIn();
+  const subA = stagedNotesDir(staging, path.join(tmp, "A Temp Project"));
+  fs.mkdirSync(subA, { recursive: true });
+  fs.writeFileSync(mdPath(subA, "Session"), "A", "utf8");
+  fs.writeFileSync(mdPath(staging, "Legacy"), "old flat note", "utf8"); // pre-keyed version
+  const batches = stagedBatches(staging);
+  assert.equal(batches.length, 2);
+  assert.ok(batches.includes(subA), "per-Set subfolder");
+  assert.ok(batches.includes(staging), "legacy loose files surfaced as a batch");
 });
 
 // ---- bring notes ----

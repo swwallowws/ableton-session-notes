@@ -89,9 +89,14 @@ export const resolveSetName = (root: string): string | null => {
 // cross-project "bleed"); the SAME unsaved Set reopens to its own notes.
 // FNV-1a over the path -> a short, filesystem-safe, stable folder name.
 export const stagedRootKey = (root: string): string => {
+  // Normalize first so the SAME Set hashes identically across opens regardless of
+  // separator or case: Windows mixes \ and / and is case-insensitive, and macOS's
+  // default filesystem is case-insensitive too. Otherwise a later open could key to
+  // a different subfolder and lose same-Set continuity (never a bleed - just friction).
+  const norm = root.replace(/[\\/]+/g, "/").replace(/\/+$/, "").toLowerCase();
   let h = 2166136261;
-  for (let i = 0; i < root.length; i++) {
-    h ^= root.charCodeAt(i);
+  for (let i = 0; i < norm.length; i++) {
+    h ^= norm.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
   return "s" + (h >>> 0).toString(36);

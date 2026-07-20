@@ -329,6 +329,17 @@ test("stagedRootKey is stable, path-unique, and filesystem-safe", () => {
   assert.ok(/^s[a-z0-9]+$/.test(stagedRootKey("/x/A Temp Project")), "no path separators in key");
 });
 
+test("stagedRootKey normalizes separator and case so the same Set is stable on Windows", () => {
+  const win = "C:\\Users\\me\\A Temp Project";
+  const fwd = "C:/Users/me/A Temp Project";
+  const low = "c:/users/me/a temp project";
+  assert.equal(stagedRootKey(win), stagedRootKey(fwd), "backslash vs forward slash");
+  assert.equal(stagedRootKey(fwd), stagedRootKey(low), "case-insensitive");
+  assert.equal(stagedRootKey(win + "\\"), stagedRootKey(win), "trailing separator ignored");
+  // Genuinely different Sets must still get different keys.
+  assert.notEqual(stagedRootKey("C:/x/A Temp Project"), stagedRootKey("C:/x/B Temp Project"));
+});
+
 test("stagingOverride keys by root when transient, undefined when saved", () => {
   const staging = "/base/Unsaved Notes";
   assert.equal(stagingOverride(staging, "/x/A Temp Project", false), undefined);

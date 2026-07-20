@@ -814,7 +814,7 @@
         const n = STATE.migration.count;
         document.getElementById("mtext").textContent =
           "New project - bring your " + n + (n === 1 ? " note" : " notes") +
-          " from “" + STATE.migration.fromName + "” over?";
+          " from " + STATE.migration.fromName + " over?";
         migrate.hidden = false;
       }
       document.getElementById("mbring").addEventListener("click", () => post("bring"));

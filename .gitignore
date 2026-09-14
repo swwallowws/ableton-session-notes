@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.ablx
 .DS_Store
+# Ableton Extensions SDK tarballs: licensed by Ableton, not redistributable
+vendor/

@@ -78,6 +78,8 @@ The `#` heading, the prose line, and the to-dos are ignored by the timeline; onl
 
 ## Develop
 
+The Ableton Extensions SDK isn't included in this repo (its license doesn't allow redistribution). Get `ableton-extensions-sdk-1.0.0-beta.0.tgz` and `ableton-extensions-cli-1.0.0-beta.0.tgz` from Ableton and place them in `vendor/` before installing.
+
 ```bash
 npm install
 npm start        # build + run in Live's Extension Host (Developer Mode must be ON)

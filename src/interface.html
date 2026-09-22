@@ -1042,16 +1042,19 @@
       const pathtext = document.getElementById("pathtext");
       function sanitizeName(n) { return (n.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled"); }
       function currentFilePath() {
-        const dir = folderFor(current);
+        let dir = folderFor(current);
         if (!dir) return "";
-        // A drive letter (C:...) means Windows regardless of which separator the
-        // host handed back - the dev CLI forward-slashes every path before the
-        // extension ever sees it, so "does dir contain a backslash" is never true
-        // on Windows in dev mode, and the packaged host isn't guaranteed to differ.
-        // Detecting by drive letter and normalizing the whole path to backslash is
-        // the one check that works no matter which separator storageDirectory used.
-        const isWindows = /^[A-Za-z]:/.test(dir);
+        // A drive letter (C:...) or a UNC prefix means Windows regardless of which
+        // separator the host handed back - the dev CLI forward-slashes every path
+        // before the extension ever sees it, so "does dir contain a backslash" is
+        // never true on Windows in dev mode, and the packaged host isn't guaranteed
+        // to differ. Detecting by drive letter/UNC and normalizing the whole path
+        // to backslash is the one check that works no matter which separator
+        // storageDirectory actually used.
+        const isWindows = /^[A-Za-z]:/.test(dir) || /^\\\\/.test(dir) || /^\/\/[^/]/.test(dir);
         const name = sanitizeName(nameOf(current)) + ".md";
+        // Strip a trailing separator first so joining never doubles it up.
+        dir = dir.replace(/[\\/]+$/, "");
         if (isWindows) return (dir.replace(/\//g, "\\") + "\\" + name);
         return dir + "/" + name;
       }

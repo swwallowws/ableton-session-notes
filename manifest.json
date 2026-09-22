@@ -1,7 +1,7 @@
 {
   "name": "Session Notes",
-  "author": "bengybade",
+  "author": "swwallowws",
   "entry": "dist/extension.js",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "minimumApiVersion": "1.0.0"
 }

@@ -260,11 +260,6 @@
       button.ghost { border-color: transparent; background: transparent; color: var(--muted); }
       button.ghost:hover { color: var(--text); background: var(--field); }
       button.icon.on { color: var(--accent); background: var(--field); }
-      button:disabled { opacity: 0.38; cursor: default; }
-      button:disabled:hover { background: var(--field); }
-      button.ghost:disabled:hover { background: transparent; color: var(--muted); }
-      /* the active lyric line while following playback (dormant, see follow.ts) */
-      .md .lyric-active { background: rgba(230, 231, 234, 0.14); border-radius: 2px; }
       button.icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; }
       button.icon svg { display: block; }
       /* instant custom tooltip (native title has a ~1s delay we can't change) */
@@ -333,7 +328,6 @@
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
           <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
           <button id="cornerTimeline" class="icon ghost tip-left" data-tip="Send lyrics to timeline" aria-label="Send lyrics to arrangement timeline"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 H15" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.4 V10.6 M8 5.4 V10.6 M12 5.4 V10.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-          <button id="followBtn" class="icon ghost tip-left" data-tip="Follow playback" aria-label="Highlight lyrics as the song plays"><svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.8 L13 8 L4 13.2 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
           <span class="tools-meta">
             <button id="settingsBtn" class="icon ghost tip-left" data-tip="Settings" aria-label="Settings"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5 H14 M2 8 H14 M2 11.5 H14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11" cy="4.5" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/><circle cx="5" cy="8" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/><circle cx="9" cy="11.5" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/></svg></button>
             <button id="helpBtn" class="icon ghost tip-left" data-tip="Help & lyric timing" aria-label="Help and lyric timing">?</button>
@@ -507,6 +501,7 @@
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
         refreshScopeHint();
+        refreshHint();
       }
 
       function uniqueName(base, scope, ignore) {
@@ -538,6 +533,7 @@
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
         refreshScopeHint();
+        refreshHint();
       }
 
       function renameCurrent(raw) {
@@ -554,6 +550,7 @@
         rebuildSelect();
         refreshPath();
         refreshScopeHint();
+        refreshHint();
       }
 
       function enterRenameMode() { nbMode = "rename"; showNbInput(nameOf(current)); }
@@ -580,6 +577,7 @@
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
         refreshScopeHint();
+        refreshHint();
       }
 
       nbSelect.addEventListener("change", () => {
@@ -821,50 +819,6 @@
         document.body.classList.toggle("peek", e.clientY >= revealFrom);
       });
 
-      // ---- follow playback (karaoke): BLOCKED on SDK, see src/follow.ts ----
-      // The scheduling + highlight logic below is real (and unit-tested via
-      // src/follow.ts), but it has no live position to run on: the SDK exposes no
-      // playhead, and even if it did, this modal pad has no host→webview channel
-      // to stream one in. So the toggle is disabled unless STATE.transportAvailable,
-      // which is false on every current SDK build.
-      const followBtn = document.getElementById("followBtn");
-      const transportAvailable = !!(STATE && STATE.transportAvailable);
-      if (!transportAvailable) {
-        followBtn.disabled = true;
-        followBtn.dataset.tip = "Follow playback: needs Live transport (not in SDK yet)";
-      }
-      // Mirrors src/follow.ts. buildSchedule → when each line becomes active (beats);
-      // activeLineAt → which line is current at a given beat. Kept in sync with the
-      // host-side module so the eventual live feed drops straight in.
-      function buildScheduleJS(lines, spacing) {
-        spacing = spacing && spacing > 0 ? spacing : 4;
-        return lines.map((name, i) => ({ beat: i * spacing, name }));
-      }
-      function activeLineAtJS(schedule, beat) {
-        let idx = -1;
-        for (let i = 0; i < schedule.length; i++) {
-          if (schedule[i].beat <= beat) idx = i; else break;
-        }
-        return idx;
-      }
-      // Highlight the Nth rendered line in the preview. Dormant until a live beat
-      // feed exists; wired here so turning follow on is a one-line change later.
-      function highlightLyricLine(idx) {
-        const nodes = preview.querySelectorAll("p, li");
-        nodes.forEach((n, i) => n.classList.toggle("lyric-active", i === idx));
-      }
-      let followOn = false;
-      followBtn.addEventListener("click", () => {
-        if (!transportAvailable) return; // gated off on today's SDK
-        followOn = !followOn;
-        followBtn.classList.toggle("on", followOn);
-        // TODO(sdk): when transport read + a live host→webview channel exist,
-        // subscribe to playhead position here and, on each update, call
-        //   highlightLyricLine(activeLineAtJS(buildScheduleJS(lyricLines()), beat))
-        // Unsubscribe when followOn goes false.
-        if (!followOn) highlightLyricLine(-1);
-      });
-
       // ---- "bring notes from another project" offer (after a Save As) ----
       let dismissedMigration = false;
       const migrate = document.getElementById("migrate");
@@ -928,12 +882,13 @@
       // ---- unsaved-Set hint ----
       // Until a Set is saved it lives in Ableton's transient "Untitled Project"
       // folder (or none is detected), so notes aren't yet tied to a project.
-      // Surface that quietly; it clears itself once the Set is saved. Don't stack
-      // it under the bring-notes offer.
+      // Surface that quietly; it clears itself once the Set is saved. Doesn't
+      // apply to a Global note (nothing to attach to a Set), so it's also
+      // scope-gated the same way scopeHint is - refreshHint() (defined later)
+      // keeps this in sync on every later note switch.
       const pname = (STATE && STATE.projectName) || "";
       const unsaved = !hasProject || pname === "Untitled Project" || / Temp Project$/.test(pname);
-      if (unsaved && !(STATE && STATE.migration))
-        document.getElementById("hint").hidden = false;
+      document.getElementById("hint").hidden = !(unsaved && !(STATE && STATE.migration) && scopeOf(current) === "p");
 
       // ---- global-note hint ----
       // A Global note looks the same as a Project note once picked, with nothing
@@ -1056,6 +1011,7 @@
       const pathbar = document.getElementById("pathbar");
       const pathtext = document.getElementById("pathtext");
       const scopeHint = document.getElementById("scopeHint");
+      const unsavedHint = document.getElementById("hint");
       function sanitizeName(n) { return (n.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled"); }
       function currentFilePath() {
         let dir = folderFor(current);
@@ -1079,6 +1035,7 @@
       // against a Project note - say so plainly, the same way the unsaved-Set
       // hint does. Runs every time the selected note changes, not just once.
       function refreshScopeHint() { scopeHint.hidden = scopeOf(current) !== "g"; }
+      function refreshHint() { unsavedHint.hidden = !(unsaved && !(STATE && STATE.migration) && scopeOf(current) === "p"); }
       revealBtn.addEventListener("click", () => {
         pathbar.hidden = !pathbar.hidden;
         const showing = !pathbar.hidden;

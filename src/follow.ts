@@ -1,16 +1,16 @@
-// Pure logic for a "lyrics follow the playhead" (karaoke) mode — specifically the
+// Pure logic for a "lyrics follow the playhead" (karaoke) mode: specifically the
 // part that CAN be written and tested today. Given a schedule of when each lyric
 // line becomes active (in beats) and the current playback position, it returns
 // which line is active. Everything missing is on the SDK side (see the two
-// BLOCKED notes), not here — so when the SDK catches up, this is ready to drive
+// BLOCKED notes), not here, so when the SDK catches up, this is ready to drive
 // the highlight.
 //
-// BLOCKED — this feature cannot ship until the Extensions SDK provides:
+// BLOCKED: this feature cannot ship until the Extensions SDK provides:
 //   1. Transport read access: a current playhead position (in beats) and a
 //      play/stop state, ideally with a change observer. `1.0.0-beta.0` exposes no
 //      transport at all, so there is nothing to feed `activeLineAt` a live beat.
 //   2. A host→webview channel for an OPEN dialog (or a non-modal panel). The pad
-//      is a one-shot modal — `ui.showModalDialog` resolves once, on close — so
+//      is a one-shot modal (`ui.showModalDialog` resolves once, on close), so
 //      even with a playhead the host couldn't stream position into the open pad
 //      to move the highlight. A persistent/non-modal surface would be needed.
 // See the memory note "sdk-timeline-transport-gaps" and the SDK feature request.

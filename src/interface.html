@@ -263,7 +263,7 @@
       button:disabled { opacity: 0.38; cursor: default; }
       button:disabled:hover { background: var(--field); }
       button.ghost:disabled:hover { background: transparent; color: var(--muted); }
-      /* the active lyric line while following playback (dormant — see follow.ts) */
+      /* the active lyric line while following playback (dormant, see follow.ts) */
       .md .lyric-active { background: rgba(230, 231, 234, 0.14); border-radius: 2px; }
       button.icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; }
       button.icon svg { display: block; }
@@ -316,6 +316,10 @@
     <div class="hint" id="hint" hidden>
       <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
       <span>Save your Set to attach notes.</span>
+    </div>
+    <div class="hint" id="scopeHint" hidden>
+      <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
+      <span>This is a Global note. It is not tied to this Set. It looks the same in every project.</span>
     </div>
     <div class="pathbar" id="pathbar" hidden>
       <span class="p" id="pathtext"></span>
@@ -502,6 +506,7 @@
         nbSelect.dataset.tip = folderFor(current);
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
+        refreshScopeHint();
       }
 
       function uniqueName(base, scope, ignore) {
@@ -532,6 +537,7 @@
         rebuildSelect();
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
+        refreshScopeHint();
       }
 
       function renameCurrent(raw) {
@@ -547,6 +553,7 @@
         current = newId;
         rebuildSelect();
         refreshPath();
+        refreshScopeHint();
       }
 
       function enterRenameMode() { nbMode = "rename"; showNbInput(nameOf(current)); }
@@ -572,6 +579,7 @@
         rebuildSelect();
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
+        refreshScopeHint();
       }
 
       nbSelect.addEventListener("change", () => {
@@ -813,7 +821,7 @@
         document.body.classList.toggle("peek", e.clientY >= revealFrom);
       });
 
-      // ---- follow playback (karaoke) — BLOCKED on SDK, see src/follow.ts ----
+      // ---- follow playback (karaoke): BLOCKED on SDK, see src/follow.ts ----
       // The scheduling + highlight logic below is real (and unit-tested via
       // src/follow.ts), but it has no live position to run on: the SDK exposes no
       // playhead, and even if it did, this modal pad has no host→webview channel
@@ -823,7 +831,7 @@
       const transportAvailable = !!(STATE && STATE.transportAvailable);
       if (!transportAvailable) {
         followBtn.disabled = true;
-        followBtn.dataset.tip = "Follow playback — needs Live transport (not in SDK yet)";
+        followBtn.dataset.tip = "Follow playback: needs Live transport (not in SDK yet)";
       }
       // Mirrors src/follow.ts. buildSchedule → when each line becomes active (beats);
       // activeLineAt → which line is current at a given beat. Kept in sync with the
@@ -926,6 +934,13 @@
       const unsaved = !hasProject || pname === "Untitled Project" || / Temp Project$/.test(pname);
       if (unsaved && !(STATE && STATE.migration))
         document.getElementById("hint").hidden = false;
+
+      // ---- global-note hint ----
+      // A Global note looks the same as a Project note once picked, with nothing
+      // else on screen saying which one it is. Say so plainly, same pattern as
+      // the unsaved-Set hint above. refreshScopeHint() (defined later, not
+      // called yet here) keeps this in sync on every later note switch.
+      document.getElementById("scopeHint").hidden = scopeOf(current) !== "g";
 
       // ---- delete confirm ----
       const confirmBar = document.getElementById("confirm");
@@ -1040,6 +1055,7 @@
       const revealBtn = document.getElementById("reveal");
       const pathbar = document.getElementById("pathbar");
       const pathtext = document.getElementById("pathtext");
+      const scopeHint = document.getElementById("scopeHint");
       function sanitizeName(n) { return (n.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled"); }
       function currentFilePath() {
         let dir = folderFor(current);
@@ -1059,6 +1075,10 @@
         return dir + "/" + name;
       }
       function refreshPath() { if (!pathbar.hidden) pathtext.textContent = currentFilePath() || "(location unavailable)"; }
+      // Global notes aren't tied to any Set, so switching to one is easy to miss
+      // against a Project note - say so plainly, the same way the unsaved-Set
+      // hint does. Runs every time the selected note changes, not just once.
+      function refreshScopeHint() { scopeHint.hidden = scopeOf(current) !== "g"; }
       revealBtn.addEventListener("click", () => {
         pathbar.hidden = !pathbar.hidden;
         const showing = !pathbar.hidden;

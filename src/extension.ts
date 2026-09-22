@@ -383,12 +383,12 @@ export function activate(activation: ActivationContext) {
     }
   };
 
-  // ---- transport read (BLOCKED — see src/follow.ts) --------------------------
+  // ---- transport read (BLOCKED: see src/follow.ts) --------------------------
   // A "follow the playhead" lyrics mode needs the live playback position. The SDK
   // (1.0.0-beta.0) exposes NO transport, so this feature-detects a hypothetical
   // future `song.playheadTime` / `song.isPlaying` and returns null until it
-  // exists — the whole follow feature stays gated off the capability flag below.
-  // NOTE: transport read is necessary but NOT sufficient — the pad is a one-shot
+  // exists, so the whole follow feature stays gated off the capability flag below.
+  // NOTE: transport read is necessary but NOT sufficient; the pad is a one-shot
   // modal with no host→webview channel while open, so streaming positions into it
   // needs a second SDK addition (a non-modal panel). See follow.ts.
   type Transport = { beat: number; playing: boolean };
@@ -485,7 +485,7 @@ export function activate(activation: ActivationContext) {
       state.zoom = zoom;
 
       // Capability flag for the pad's (gated) "Follow playback" toggle. False on
-      // every current SDK build — readTransport() has nothing to detect yet.
+      // every current SDK build; readTransport() has nothing to detect yet.
       (state as any).transportAvailable = readTransport() !== null;
       const html = interfaceHtml.replace("'__STATE__'", JSON.stringify(state));
       const url = `data:text/html,${encodeURIComponent(html)}`;

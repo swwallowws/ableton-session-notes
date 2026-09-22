@@ -4,3 +4,4 @@ dist/
 .DS_Store
 # Ableton Extensions SDK tarballs: licensed by Ableton, not redistributable
 vendor/
+.env

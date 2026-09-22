@@ -1044,10 +1044,16 @@
       function currentFilePath() {
         const dir = folderFor(current);
         if (!dir) return "";
-        // Match the host's separator so the shown/copied path is native on Windows
-        // (backslash dirs) as well as macOS - the dir comes straight from the host.
-        const sep = dir.indexOf("\\") !== -1 ? "\\" : "/";
-        return dir + sep + sanitizeName(nameOf(current)) + ".md";
+        // A drive letter (C:...) means Windows regardless of which separator the
+        // host handed back - the dev CLI forward-slashes every path before the
+        // extension ever sees it, so "does dir contain a backslash" is never true
+        // on Windows in dev mode, and the packaged host isn't guaranteed to differ.
+        // Detecting by drive letter and normalizing the whole path to backslash is
+        // the one check that works no matter which separator storageDirectory used.
+        const isWindows = /^[A-Za-z]:/.test(dir);
+        const name = sanitizeName(nameOf(current)) + ".md";
+        if (isWindows) return (dir.replace(/\//g, "\\") + "\\" + name);
+        return dir + "/" + name;
       }
       function refreshPath() { if (!pathbar.hidden) pathtext.textContent = currentFilePath() || "(location unavailable)"; }
       revealBtn.addEventListener("click", () => {

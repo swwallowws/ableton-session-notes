@@ -13,6 +13,7 @@ body {
 .embed .intro { display: none; }
 
 .mut { color: var(--ink-mut); }
+a { color: var(--ink); text-decoration-color: var(--acc); text-underline-offset: 3px; }
 .small { font-size: 12px; }
 code { font: 0.9em var(--font-mono); }
 .eyebrow, .cap {
@@ -79,25 +80,27 @@ textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 .controls { display: flex; align-items: center; gap: calc(var(--space) * 2); flex-wrap: wrap; }
 .seg { display: inline-flex; }
 .seg button + button { border-left: none; }
-/* Tempo box: a big accent readout you drag or type into, flanked by steppers. */
-.tempo { display: inline-flex; align-items: center; }
-.tempo .cap { margin-right: var(--space); }
-.tempo .step {
-  width: 30px; height: 34px; padding: 0;
-  font: 500 16px/1 var(--font-mono); color: var(--ink-mut);
+/* Tempo box: only the number. On hover an arrow appears in the half the mouse
+   is over (up on top, down below); click steps, holding repeats. */
+.tempo { display: inline-flex; align-items: center; gap: var(--space); }
+.tempo-box {
+  position: relative; display: inline-grid; place-items: center;
+  min-width: 5ch; height: 40px; padding: 0 14px;
+  border: var(--hairline); background: var(--ground);
+  font: 600 24px/1 var(--font-mono); color: var(--acc);
+  cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none;
 }
-.tempo .step:hover { color: var(--acc); }
-.tempo input {
-  width: 5.5ch; height: 34px; padding: 0 4px; margin: 0 -1px;
-  border-color: var(--line); background: var(--ground);
-  font: 600 20px/1 var(--font-mono); color: var(--acc); text-align: center;
-  cursor: ns-resize; -moz-appearance: textfield; appearance: textfield;
+.tempo-box:hover, .tempo-box.held { border-color: var(--acc); }
+.tempo-box[data-half="up"] { cursor: n-resize; }
+.tempo-box[data-half="down"] { cursor: s-resize; }
+.tempo-arrow {
+  position: absolute; right: 3px; width: 0; height: 0; opacity: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  transition: opacity .12s;
 }
-.tempo input:focus { cursor: text; }
-.tempo input.scrubbing { border-color: var(--acc); }
-.tempo input::-webkit-outer-spin-button,
-.tempo input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.tempo .unit { margin-left: var(--space); font: 500 11px/1 var(--font-mono); letter-spacing: .1em; color: var(--ink-mut); }
+.tempo-box[data-half="up"] .tempo-arrow { top: 5px; border-bottom: 5px solid var(--acc); opacity: 1; }
+.tempo-box[data-half="down"] .tempo-arrow { bottom: 5px; border-top: 5px solid var(--acc); opacity: 1; }
+.tempo .unit { font: 500 11px/1 var(--font-mono); letter-spacing: .1em; color: var(--ink-mut); }
 
 .timeline-scroll { overflow-x: auto; }
 .timeline { --bars: 16; position: relative; min-width: max(100%, calc(var(--bars) * 44px)); padding-bottom: var(--space); }

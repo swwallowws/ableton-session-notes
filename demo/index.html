@@ -22,7 +22,7 @@
   <header class="intro">
     <p class="eyebrow">Session Notes · web demo</p>
     <h1 class="head">Tag a lyric, place it on the timeline.</h1>
-    <p class="mut">The notepad runs inside Ableton Live 12. This page runs its real timing code on whatever you type: tag a line with a bar, a bar and beat, a timecode or a bit of math, and the lines under it follow one bar apart.</p>
+    <p class="mut">The notepad is an <a href="https://www.ableton.com/en/live/extensions/">Ableton Live 12 extension</a>. This page runs its real timing code on whatever you type: tag a line with a bar, a bar and beat, a timecode or a bit of math, and the lines under it follow one bar apart.</p>
   </header>
 
   <main class="demo">
@@ -42,18 +42,19 @@
 
     <section class="pane arrangement">
       <div class="pane-bar">
-        <span class="cap">Arrangement</span>
+        <span class="cap">Ableton Live arrangement</span>
         <span class="controls">
           <span role="group" aria-label="Send as" class="seg">
             <button type="button" data-mode="locators" aria-pressed="true">Locators</button>
             <button type="button" data-mode="clips" aria-pressed="false">Clips</button>
           </span>
-          <span class="tempo" role="group" aria-labelledby="tempo-label">
+          <span class="tempo">
             <span id="tempo-label" class="cap">Tempo</span>
-            <button type="button" class="step" data-step="-1" aria-label="Slower (Shift: 10)">&minus;</button>
-            <input id="bpm" type="number" inputmode="numeric" min="40" max="300" step="1" value="120"
-                   aria-labelledby="tempo-label" title="Drag up or down, or click to type">
-            <button type="button" class="step" data-step="1" aria-label="Faster (Shift: 10)">+</button>
+            <span id="bpm" class="tempo-box" role="spinbutton" tabindex="0"
+                  aria-labelledby="tempo-label" aria-valuemin="40" aria-valuemax="300" aria-valuenow="120">
+              <span class="tempo-value">120</span>
+              <span class="tempo-arrow" aria-hidden="true"></span>
+            </span>
             <span class="unit">BPM</span>
           </span>
         </span>

@@ -37,7 +37,8 @@ const $ = <T extends HTMLElement>(id: string): T => {
 };
 
 const md = $<HTMLTextAreaElement>("md");
-const bpmInput = $<HTMLInputElement>("bpm");
+const tempoBox = $("bpm");
+const tempoValue = tempoBox.querySelector<HTMLElement>(".tempo-value")!;
 const linesEl = $<HTMLOListElement>("lines");
 const countEl = $("count");
 const timeline = $("timeline");
@@ -49,53 +50,78 @@ const BPM_MIN = 40;
 const BPM_MAX = 300;
 const clampBpm = (v: number): number => Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(v)));
 
-const bpm = (): number => {
-  const v = Number(bpmInput.value);
-  return v >= BPM_MIN && v <= BPM_MAX ? v : 120;
-};
+let tempo = 120;
+const bpm = (): number => tempo;
 
 function setBpm(v: number): void {
-  bpmInput.value = String(clampBpm(v));
+  const next = clampBpm(v);
+  if (next === tempo) return;
+  tempo = next;
+  tempoValue.textContent = String(tempo);
+  tempoBox.setAttribute("aria-valuenow", String(tempo));
   render();
 }
 
-// Tempo box, like Live's: drag up/down to change it (4 px per BPM), or click
-// without dragging to type a value. Steppers nudge by 1, Shift by 10.
+// Tempo box: just the number. Hovering shows an up arrow on the top half and
+// a down arrow on the bottom half; a click steps one BPM that way, and holding
+// keeps stepping, slow at first and faster the longer you hold.
+const HOLD_DELAY_MS = 380; // before a press turns into a hold
+const HOLD_START_MS = 120; // first repeat interval (about 8 steps a second)
+const HOLD_FASTEST_MS = 28; // top speed (about 35 steps a second)
+const HOLD_EASE = 0.9; // each repeat is this much quicker than the last
+
 function wireTempo(): void {
-  let startY = 0;
-  let startBpm = 0;
-  let dragged = false;
-  bpmInput.addEventListener("pointerdown", (e) => {
-    if (e.pointerType !== "mouse" || document.activeElement === bpmInput) return;
-    e.preventDefault(); // don't focus yet: this may be a drag
-    startY = e.clientY;
-    startBpm = bpm();
-    dragged = false;
-    bpmInput.setPointerCapture(e.pointerId);
-    bpmInput.classList.add("scrubbing");
+  let dir: 1 | -1 = 1;
+  let timer: number | undefined;
+
+  const halfAt = (e: PointerEvent): 1 | -1 => {
+    const r = tempoBox.getBoundingClientRect();
+    return e.clientY < r.top + r.height / 2 ? 1 : -1;
+  };
+  const showHalf = (d: 1 | -1) => {
+    tempoBox.dataset["half"] = d === 1 ? "up" : "down";
+  };
+  const stop = () => {
+    window.clearTimeout(timer);
+    timer = undefined;
+    tempoBox.classList.remove("held");
+  };
+  const repeat = (interval: number) => {
+    setBpm(tempo + dir);
+    timer = window.setTimeout(() => repeat(Math.max(HOLD_FASTEST_MS, interval * HOLD_EASE)), interval);
+  };
+
+  tempoBox.addEventListener("pointermove", (e) => {
+    if (timer === undefined) showHalf(halfAt(e));
   });
-  bpmInput.addEventListener("pointermove", (e) => {
-    if (!bpmInput.hasPointerCapture(e.pointerId)) return;
-    const dy = startY - e.clientY;
-    if (Math.abs(dy) > 2) dragged = true;
-    if (dragged) setBpm(startBpm + dy / 4);
+  tempoBox.addEventListener("pointerleave", () => {
+    delete tempoBox.dataset["half"];
+    stop();
   });
-  bpmInput.addEventListener("pointerup", (e) => {
-    if (!bpmInput.hasPointerCapture(e.pointerId)) return;
-    bpmInput.releasePointerCapture(e.pointerId);
-    bpmInput.classList.remove("scrubbing");
-    if (!dragged) {
-      bpmInput.focus();
-      bpmInput.select();
-    }
+  tempoBox.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    tempoBox.focus();
+    dir = halfAt(e);
+    showHalf(dir);
+    tempoBox.setPointerCapture(e.pointerId);
+    tempoBox.classList.add("held");
+    setBpm(tempo + dir); // the click itself steps once
+    timer = window.setTimeout(() => repeat(HOLD_START_MS), HOLD_DELAY_MS);
   });
-  bpmInput.addEventListener("change", () => setBpm(Number(bpmInput.value) || 120));
-  for (const b of document.querySelectorAll<HTMLButtonElement>(".tempo .step")) {
-    b.addEventListener("click", (e) => {
-      const dir = Number(b.dataset["step"]) || 0;
-      setBpm(bpm() + dir * (e.shiftKey ? 10 : 1));
-    });
-  }
+  tempoBox.addEventListener("pointerup", stop);
+  tempoBox.addEventListener("pointercancel", stop);
+  tempoBox.addEventListener("lostpointercapture", stop);
+
+  // Keyboard: arrows step by 1, Shift by 10; Page Up/Down by 10.
+  tempoBox.addEventListener("keydown", (e) => {
+    const big = e.shiftKey ? 10 : 1;
+    const step =
+      e.key === "ArrowUp" ? big : e.key === "ArrowDown" ? -big : e.key === "PageUp" ? 10 : e.key === "PageDown" ? -10 : 0;
+    if (!step) return;
+    e.preventDefault();
+    setBpm(tempo + step);
+  });
 }
 
 // 1-indexed bar.beat, the way Live's ruler reads.
@@ -203,7 +229,6 @@ function setMode(next: "locators" | "clips"): void {
 
 md.value = EXAMPLE;
 md.addEventListener("input", render);
-bpmInput.addEventListener("input", render);
 wireTempo();
 $("reset").addEventListener("click", () => {
   md.value = EXAMPLE;

@@ -7,11 +7,13 @@
   display: inline-grid;
   place-items: center;
   min-width: 5ch;
-  height: 1.7em;
-  padding: 0 0.6em;
+  height: 1.75em;
+  padding: 0 0.7em;
   border: var(--hairline);
   background: var(--ground);
-  font: 600 24px/1 var(--font-mono);
+  /* Sized to sit in a toolbar next to 12-13 px controls without shouting;
+     set font-size on the element to scale the whole box. */
+  font: 600 17px/1 var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--acc);
   cursor: pointer;

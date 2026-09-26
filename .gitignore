@@ -4,4 +4,7 @@ dist/
 .DS_Store
 # Ableton Extensions SDK tarballs: licensed by Ableton, not redistributable
 vendor/
+# ...except the web demo's copy of the shared design system (ours, OFL fonts)
+!demo/vendor/
+demo-dist/
 .env

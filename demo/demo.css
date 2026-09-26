@@ -1,0 +1,113 @@
+/* Session Notes web demo. Colours, type and shape come from the shared design
+   system (vendor/design/tokens.css); this file only lays things out. */
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font: 15px/1.55 var(--font-sans); font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  padding: calc(var(--space) * 4) 16px calc(var(--space) * 6);
+  max-width: 1080px; margin-inline: auto;
+}
+.embed body { padding: 12px; max-width: none; }
+.embed .intro { display: none; }
+
+.mut { color: var(--ink-mut); }
+.small { font-size: 12px; }
+code { font: 0.9em var(--font-mono); }
+.eyebrow, .cap {
+  margin: 0; font: 500 11px/1.4 var(--font-mono); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-mut);
+}
+.head {
+  margin: calc(var(--space) * 1.5) 0 0; font-size: clamp(1.8rem, 5vw, 3rem);
+  font-stretch: var(--head-stretch); font-weight: var(--head-weight);
+  letter-spacing: var(--head-tracking); line-height: .95;
+}
+.intro { margin-bottom: calc(var(--space) * 4); }
+.intro p.mut { max-width: 62ch; margin: calc(var(--space) * 2) 0 0; }
+
+button, input {
+  font: inherit; color: var(--ink); background: var(--ground-2); border: var(--hairline);
+  border-radius: var(--radius); padding: 3px var(--space);
+}
+button { cursor: pointer; font: 500 12px/1.4 var(--font-mono); }
+button:hover { background: var(--band); }
+button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+/* ---- layout: note | lyric lines, arrangement full width underneath ---- */
+.demo {
+  display: grid; gap: calc(var(--space) * 2);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-areas: "note lyrics" "arr arr";
+}
+.note { grid-area: note; }
+.lyrics { grid-area: lyrics; }
+.arrangement { grid-area: arr; }
+@media (max-width: 720px) {
+  .demo { grid-template-columns: 1fr; grid-template-areas: "note" "lyrics" "arr"; }
+}
+
+.pane { border: var(--hairline); background: var(--ground-2); display: flex; flex-direction: column; min-width: 0; }
+.pane-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space); flex-wrap: wrap;
+  padding: var(--space) calc(var(--space) * 1.5); border-bottom: var(--hairline);
+}
+
+textarea {
+  flex: 1; min-height: 260px; resize: vertical; border: 0; margin: 0;
+  padding: calc(var(--space) * 1.5); background: var(--ground-2); color: var(--ink);
+  font: 13.5px/1.6 var(--font-mono);
+}
+textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.hint { margin: 0; padding: var(--space) calc(var(--space) * 1.5); border-top: var(--hairline); font-size: 12px; }
+
+/* Lyric lines, each on an accent rail like the extension's rendered view. */
+.lines { list-style: none; margin: 0; padding: calc(var(--space) * 1.5); display: grid; gap: 6px; }
+.lines li {
+  display: grid; grid-template-columns: 4.5ch 1fr auto; gap: var(--space); align-items: baseline;
+  padding: 4px var(--space); border-left: 2px solid var(--acc);
+}
+.lines li.flowed { border-left-color: var(--line); }
+.lines .pos { font: 600 12px var(--font-mono); color: var(--acc); }
+.lines .flowed .pos { color: var(--ink-mut); }
+.lines .how { font: 11px var(--font-mono); }
+.lines li.empty { display: block; border: 0; }
+
+/* ---- mock arrangement ---- */
+.controls { display: flex; align-items: center; gap: calc(var(--space) * 2); flex-wrap: wrap; }
+.seg { display: inline-flex; }
+.seg button + button { border-left: none; }
+.bpm { font: 12px var(--font-mono); color: var(--ink-mut); display: inline-flex; align-items: center; gap: 6px; }
+.bpm input { width: 6ch; font: 12px var(--font-mono); }
+
+.timeline-scroll { overflow-x: auto; }
+.timeline { --bars: 16; position: relative; min-width: max(100%, calc(var(--bars) * 44px)); padding-bottom: var(--space); }
+
+.ruler {
+  position: relative; height: 72px; border-bottom: var(--hairline);
+  background: var(--ground);
+}
+.ruler .bar {
+  position: absolute; top: 0; height: 18px; padding-left: 3px;
+  border-left: var(--hairline); font: 10px/18px var(--font-mono); color: var(--ink-mut);
+}
+.locator { position: absolute; top: 18px; bottom: 0; border-left: 2px solid var(--acc); }
+.locator .flag {
+  position: absolute; top: 0; left: 0; max-width: 160px;
+  padding: 1px 6px; background: var(--acc); color: var(--ground);
+  font: 600 11px/1.5 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.lane { position: relative; height: 44px; margin-top: var(--space); background: var(--band); }
+.lane-name {
+  position: sticky; left: 0; z-index: 1; display: inline-block;
+  padding: 0 6px; font: 10px/16px var(--font-mono); color: var(--ink-mut); background: var(--ground-2);
+}
+.clip {
+  position: absolute; top: 16px; height: 26px; padding: 0 6px;
+  background: color-mix(in oklab, var(--acc) 70%, var(--ground)); color: var(--ground);
+  border-left: 1px solid var(--ground-2);
+  font: 600 11px/26px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

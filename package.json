@@ -7,7 +7,9 @@
     "test": "tsx test/notes.test.ts && tsx test/timeline.test.ts",
     "build:prod": "tsc --noEmit && tsx build.ts --production",
     "start": "tsx build.ts && extensions-cli run",
-    "package": "tsc --noEmit && tsx build.ts --production && extensions-cli package"
+    "package": "tsc --noEmit && tsx build.ts --production && extensions-cli package",
+    "demo": "tsx build-demo.ts --serve",
+    "demo:build": "tsc -p demo && tsx build-demo.ts"
   },
   "dependencies": {
     "@ableton-extensions/sdk": "file:./vendor/ableton-extensions-sdk-1.0.0-beta.0.tgz"

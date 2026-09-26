@@ -1,0 +1,74 @@
+/* Shared design system: the only source of colour, type and shape.
+   Mode follows the system (Paper light, Night dark); data-theme="paper" or
+   "night" on any element forces one. data-category on any element sets --acc
+   for it and its children. Colours are light-dark(Paper, Night), which needs
+   Safari 17.5+, Chrome 123+ or Firefox 120+; older engines get Paper. */
+
+@font-face {
+  font-family: "Archivo";
+  src: url("fonts/Archivo.woff2") format("woff2");
+  font-weight: 400 800;
+  font-stretch: 62% 125%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light dark;
+
+  --ground:   light-dark(#efeee9, #0e0e0e);
+  --ground-2: light-dark(#f7f6f2, #161616);
+  --band:     light-dark(#e6e4de, #151515);
+  --line:     light-dark(#c9c7bf, #333333);
+  --ink:      light-dark(#111111, #f2f2ee);
+  --ink-mut:  light-dark(#6b6a64, #8a8a85);
+
+  /* Without a category the accent is ink. */
+  --acc: var(--ink);
+
+  --font-sans: "Archivo", -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --head-stretch: 125%;
+  --head-weight: 800;
+  --head-tracking: -0.02em;
+
+  --space: 8px;
+  --radius: 0;
+  --hairline: 1px solid var(--line);
+}
+
+[data-theme="paper"] { color-scheme: light; }
+[data-theme="night"] { color-scheme: dark; }
+/* data-theme only flips color-scheme by default; repaint the surface too, or a
+   themed child (e.g. <aside data-theme="night"> inside a Paper page) shows
+   the wrong ink on the parent's ground. */
+[data-theme] { background-color: var(--ground); color: var(--ink); }
+
+/* Category accents mean "active / now". Any element may carry data-category. */
+[data-category="transcribe"] { --acc: light-dark(#007489, #3df2ff); }
+[data-category="transform"]  { --acc: light-dark(#c23900, #ff5a1f); }
+[data-category="perceive"]   { --acc: light-dark(#597300, #d7ff1f); }
+[data-category="workflow"]   { --acc: light-dark(#cd0f70, #ff2d95); }
+
+/* Engines without light-dark(): Paper only. Must equal the Paper values above;
+   check-contrast.mjs enforces it. */
+@supports not (color: light-dark(#000000, #ffffff)) {
+  :root, [data-theme] { color-scheme: light; }
+  :root {
+    --ground: #efeee9;
+    --ground-2: #f7f6f2;
+    --band: #e6e4de;
+    --line: #c9c7bf;
+    --ink: #111111;
+    --ink-mut: #6b6a64;
+  }
+  [data-category="transcribe"] { --acc: #007489; }
+  [data-category="transform"]  { --acc: #c23900; }
+  [data-category="perceive"]   { --acc: #597300; }
+  [data-category="workflow"]   { --acc: #cd0f70; }
+}

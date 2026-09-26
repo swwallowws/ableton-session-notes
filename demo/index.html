@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en" data-category="workflow">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Session Notes: web demo</title>
+  <link rel="stylesheet" href="vendor/design/tokens.css">
+  <link rel="stylesheet" href="demo.css">
+  <script>
+    // Set the mode before first paint: ?theme=paper|night (from the showcase
+    // frame) wins; otherwise the system scheme applies. ?embed=1 drops the
+    // page intro so the demo fills a frame.
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var t = q.get("theme");
+      if (t === "paper" || t === "night") document.documentElement.dataset.theme = t;
+      if (q.get("embed") === "1") document.documentElement.classList.add("embed");
+    })();
+  </script>
+</head>
+<body>
+  <header class="intro">
+    <p class="eyebrow">Session Notes · web demo</p>
+    <h1 class="head">Tag a lyric, place it on the timeline.</h1>
+    <p class="mut">The notepad runs inside Ableton Live 12. This page runs its real timing code on whatever you type: tag a line with a bar, a bar and beat, a timecode or a bit of math, and the lines under it follow one bar apart.</p>
+  </header>
+
+  <main class="demo">
+    <section class="pane note">
+      <div class="pane-bar">
+        <span class="cap">Note</span>
+        <button type="button" id="reset">Reset example</button>
+      </div>
+      <textarea id="md" spellcheck="false" aria-label="Note text (Markdown)"></textarea>
+      <p class="hint mut">Tags: <code>[17]</code> bar · <code>[17.3]</code> bar and beat · <code>[1:04]</code> timecode · <code>[=8*4]</code> math, in beats. A blank line ends a block.</p>
+    </section>
+
+    <section class="pane lyrics">
+      <div class="pane-bar"><span class="cap">Lyric lines found</span><span id="count" class="mut small"></span></div>
+      <ol id="lines" class="lines"></ol>
+    </section>
+
+    <section class="pane arrangement">
+      <div class="pane-bar">
+        <span class="cap">Arrangement</span>
+        <span class="controls">
+          <span role="group" aria-label="Send as" class="seg">
+            <button type="button" data-mode="locators" aria-pressed="true">Locators</button>
+            <button type="button" data-mode="clips" aria-pressed="false">Clips</button>
+          </span>
+          <label class="bpm">Tempo <input id="bpm" type="number" min="40" max="240" step="1" value="120"> BPM</label>
+        </span>
+      </div>
+      <div class="timeline-scroll">
+        <div id="timeline" class="timeline" role="img" aria-label="Mock Ableton arrangement showing where each lyric line lands"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="demo.js"></script>
+</body>
+</html>

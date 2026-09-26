@@ -24,7 +24,7 @@ const EXAMPLE = `# Midnight Drive
 [1] Headlights bleed into the rain
 chasing signals down the lane
 [5] every mile a different me
-[1:04] and I let the whole thing go
+[0:24] and I let the whole thing go
 
 [=17*4] outro, whispered
 `;
@@ -159,13 +159,25 @@ function setMode(next: "locators" | "clips"): void {
   render();
 }
 
+// The note box grows with its text, so the whole note is always visible.
+const fit = () => {
+  md.style.height = "auto";
+  md.style.height = `${md.scrollHeight + 2}px`;
+};
+
 md.value = EXAMPLE;
-md.addEventListener("input", render);
+md.addEventListener("input", () => {
+  fit();
+  render();
+});
+window.addEventListener("resize", fit);
 $("reset").addEventListener("click", () => {
   md.value = EXAMPLE;
+  fit();
   render();
 });
 for (const b of modeButtons) {
   b.addEventListener("click", () => setMode(b.dataset["mode"] === "clips" ? "clips" : "locators"));
 }
+fit();
 render();

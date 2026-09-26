@@ -6,6 +6,8 @@
   <img alt="Session Notes - Markdown notes that live next to your .als" src="assets/session-notes-cover.png" width="720">
 </picture>
 
+**Notes that live with the set. Lyrics that land on the arrangement.**
+
 A minimal Markdown notepad for **Ableton Live 12**, built on the [Live Extensions SDK](https://ableton.com). Jot lyrics, ideas, and to-dos without leaving Live, with clean, native-feeling typography and a render-by-default Markdown view. Tag a lyric line with a bar or timecode and drop it straight onto the arrangement.
 
 > Requires Ableton Live 12 with the Extensions feature (SDK `1.0.0-beta.0`).

@@ -57,7 +57,7 @@ button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
 }
 
 textarea {
-  flex: 1; min-height: 260px; resize: vertical; border: 0; margin: 0;
+  flex: 1 0 auto; min-height: 200px; resize: none; overflow: hidden; border: 0; margin: 0;
   padding: calc(var(--space) * 1.5); background: var(--ground-2); color: var(--ink);
   font: 13.5px/1.6 var(--font-mono);
 }

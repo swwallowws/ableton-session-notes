@@ -34,7 +34,11 @@ if (serve) {
   const ctx = await esbuild.context(options);
   await ctx.watch();
   // esbuild only watches the script; re-copy the page and styles on save too.
-  for (const f of STATIC) fs.watch(`demo/${f}`, copyStatic);
+  // Watch the folder, not the files: editors save by replacing the file, which
+  // silently ends a watch on the file itself.
+  fs.watch("demo", (_event, name) => {
+    if (name && STATIC.includes(name)) copyStatic();
+  });
   const { port } = await ctx.serve({ servedir: out, port: 4190 });
   console.log(`demo at http://localhost:${port}/`);
 } else {

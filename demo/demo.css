@@ -80,26 +80,8 @@ textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 .controls { display: flex; align-items: center; gap: calc(var(--space) * 2); flex-wrap: wrap; }
 .seg { display: inline-flex; }
 .seg button + button { border-left: none; }
-/* Tempo box: only the number. On hover an arrow appears in the half the mouse
-   is over (up on top, down below); click steps, holding repeats. */
+/* Tempo: the design system's value box (vendor/design/valuebox.css). */
 .tempo { display: inline-flex; align-items: center; gap: var(--space); }
-.tempo-box {
-  position: relative; display: inline-grid; place-items: center;
-  min-width: 5ch; height: 40px; padding: 0 14px;
-  border: var(--hairline); background: var(--ground);
-  font: 600 24px/1 var(--font-mono); color: var(--acc);
-  cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none;
-}
-.tempo-box:hover, .tempo-box.held { border-color: var(--acc); }
-.tempo-box[data-half="up"] { cursor: n-resize; }
-.tempo-box[data-half="down"] { cursor: s-resize; }
-.tempo-arrow {
-  position: absolute; right: 3px; width: 0; height: 0; opacity: 0;
-  border-left: 4px solid transparent; border-right: 4px solid transparent;
-  transition: opacity .12s;
-}
-.tempo-box[data-half="up"] .tempo-arrow { top: 5px; border-bottom: 5px solid var(--acc); opacity: 1; }
-.tempo-box[data-half="down"] .tempo-arrow { bottom: 5px; border-top: 5px solid var(--acc); opacity: 1; }
 .tempo .unit { font: 500 11px/1 var(--font-mono); letter-spacing: .1em; color: var(--ink-mut); }
 
 .timeline-scroll { overflow-x: auto; }

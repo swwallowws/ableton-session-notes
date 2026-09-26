@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Session Notes: web demo</title>
   <link rel="stylesheet" href="vendor/design/tokens.css">
+  <link rel="stylesheet" href="vendor/design/valuebox.css">
   <link rel="stylesheet" href="demo.css">
   <script>
     // Set the mode before first paint: ?theme=paper|night (from the showcase
@@ -50,11 +51,7 @@
           </span>
           <span class="tempo">
             <span id="tempo-label" class="cap">Tempo</span>
-            <span id="bpm" class="tempo-box" role="spinbutton" tabindex="0"
-                  aria-labelledby="tempo-label" aria-valuemin="40" aria-valuemax="300" aria-valuenow="120">
-              <span class="tempo-value">120</span>
-              <span class="tempo-arrow" aria-hidden="true"></span>
-            </span>
+            <span id="bpm"></span>
             <span class="unit">BPM</span>
           </span>
         </span>

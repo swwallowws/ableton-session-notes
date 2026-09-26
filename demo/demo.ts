@@ -12,7 +12,7 @@ import {
   type ClipPlan,
   type Locator,
 } from "../src/timeline.js";
-import { HOLD, holdPace, stepValue } from "./hold.js";
+import { valueBox } from "./vendor/design/valuebox.js";
 
 // Original example lyrics (the same made-up song as the README's cover image).
 const EXAMPLE = `# Midnight Drive
@@ -38,8 +38,6 @@ const $ = <T extends HTMLElement>(id: string): T => {
 };
 
 const md = $<HTMLTextAreaElement>("md");
-const tempoBox = $("bpm");
-const tempoValue = tempoBox.querySelector<HTMLElement>(".tempo-value")!;
 const linesEl = $<HTMLOListElement>("lines");
 const countEl = $("count");
 const timeline = $("timeline");
@@ -47,97 +45,16 @@ const modeButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-mode
 
 let mode: "locators" | "clips" = "locators";
 
-const BPM_MIN = 40;
-const BPM_MAX = 300;
-const clampBpm = (v: number): number => Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(v)));
-
-let tempo = 120;
-const bpm = (): number => tempo;
-
-function setBpm(v: number): void {
-  const next = clampBpm(v);
-  if (next === tempo) return;
-  tempo = next;
-  tempoValue.textContent = String(tempo);
-  tempoBox.setAttribute("aria-valuenow", String(tempo));
-  render();
-}
-
-// Tempo box: just the number. Hovering shows an up arrow on the top half and
-// a down arrow on the bottom half; a click steps one BPM that way. Holding the
-// mouse or an arrow key keeps stepping on the curve in hold.ts: calm, building,
-// capped, then coarse steps of 5 for long moves.
-function wireTempo(): void {
-  let dir: 1 | -1 = 1;
-  let timer: number | undefined;
-  let repeatStart = 0;
-
-  const halfAt = (e: PointerEvent): 1 | -1 => {
-    const r = tempoBox.getBoundingClientRect();
-    return e.clientY < r.top + r.height / 2 ? 1 : -1;
-  };
-  const showHalf = (d: 1 | -1) => {
-    tempoBox.dataset["half"] = d === 1 ? "up" : "down";
-  };
-  const stop = () => {
-    window.clearTimeout(timer);
-    timer = undefined;
-    tempoBox.classList.remove("held");
-  };
-  const tick = () => {
-    const { intervalMs, step } = holdPace(performance.now() - repeatStart);
-    setBpm(stepValue(tempo, dir, step));
-    if (tempo <= BPM_MIN || tempo >= BPM_MAX) return stop(); // nothing left to do
-    timer = window.setTimeout(tick, intervalMs);
-  };
-  // One step now; repeats begin after the hold delay.
-  const start = (d: 1 | -1) => {
-    stop();
-    dir = d;
-    tempoBox.classList.add("held");
-    setBpm(tempo + dir);
-    timer = window.setTimeout(() => {
-      repeatStart = performance.now();
-      tick();
-    }, HOLD.delayMs);
-  };
-
-  tempoBox.addEventListener("pointermove", (e) => {
-    if (timer === undefined) showHalf(halfAt(e));
-  });
-  tempoBox.addEventListener("pointerleave", () => {
-    delete tempoBox.dataset["half"];
-    stop();
-  });
-  tempoBox.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    tempoBox.focus();
-    const d = halfAt(e);
-    showHalf(d);
-    tempoBox.setPointerCapture(e.pointerId);
-    start(d);
-  });
-  tempoBox.addEventListener("pointerup", stop);
-  tempoBox.addEventListener("pointercancel", stop);
-  tempoBox.addEventListener("lostpointercapture", stop);
-
-  // Keyboard: holding an arrow uses the same curve (the OS key repeat is
-  // ignored); Shift+arrow and Page Up/Down jump by 10.
-  tempoBox.addEventListener("keydown", (e) => {
-    const d = e.key === "ArrowUp" ? 1 : e.key === "ArrowDown" ? -1 : 0;
-    const jump = e.key === "PageUp" ? 10 : e.key === "PageDown" ? -10 : e.shiftKey && d ? d * 10 : 0;
-    if (!d && !jump) return;
-    e.preventDefault();
-    if (jump) return setBpm(tempo + jump);
-    if (e.repeat) return; // our own timer is already repeating
-    start(d as 1 | -1);
-  });
-  tempoBox.addEventListener("keyup", (e) => {
-    if (e.key === "ArrowUp" || e.key === "ArrowDown") stop();
-  });
-  tempoBox.addEventListener("blur", stop);
-}
+// Tempo: the design system's value box (click or hold to change; see
+// vendor/design/valuebox.js).
+const tempo = valueBox($("bpm"), {
+  min: 40,
+  max: 300,
+  value: 120,
+  labelledBy: "tempo-label",
+  onChange: () => render(),
+});
+const bpm = (): number => tempo.value;
 
 // 1-indexed bar.beat, the way Live's ruler reads.
 const barBeat = (beat: number): string => {
@@ -244,7 +161,6 @@ function setMode(next: "locators" | "clips"): void {
 
 md.value = EXAMPLE;
 md.addEventListener("input", render);
-wireTempo();
 $("reset").addEventListener("click", () => {
   md.value = EXAMPLE;
   render();

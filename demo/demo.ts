@@ -12,6 +12,7 @@ import {
   type ClipPlan,
   type Locator,
 } from "../src/timeline.js";
+import { HOLD, holdPace, stepValue } from "./hold.js";
 
 // Original example lyrics (the same made-up song as the README's cover image).
 const EXAMPLE = `# Midnight Drive
@@ -63,16 +64,13 @@ function setBpm(v: number): void {
 }
 
 // Tempo box: just the number. Hovering shows an up arrow on the top half and
-// a down arrow on the bottom half; a click steps one BPM that way, and holding
-// keeps stepping, slow at first and faster the longer you hold.
-const HOLD_DELAY_MS = 380; // before a press turns into a hold
-const HOLD_START_MS = 120; // first repeat interval (about 8 steps a second)
-const HOLD_FASTEST_MS = 28; // top speed (about 35 steps a second)
-const HOLD_EASE = 0.9; // each repeat is this much quicker than the last
-
+// a down arrow on the bottom half; a click steps one BPM that way. Holding the
+// mouse or an arrow key keeps stepping on the curve in hold.ts: calm, building,
+// capped, then coarse steps of 5 for long moves.
 function wireTempo(): void {
   let dir: 1 | -1 = 1;
   let timer: number | undefined;
+  let repeatStart = 0;
 
   const halfAt = (e: PointerEvent): 1 | -1 => {
     const r = tempoBox.getBoundingClientRect();
@@ -86,9 +84,22 @@ function wireTempo(): void {
     timer = undefined;
     tempoBox.classList.remove("held");
   };
-  const repeat = (interval: number) => {
+  const tick = () => {
+    const { intervalMs, step } = holdPace(performance.now() - repeatStart);
+    setBpm(stepValue(tempo, dir, step));
+    if (tempo <= BPM_MIN || tempo >= BPM_MAX) return stop(); // nothing left to do
+    timer = window.setTimeout(tick, intervalMs);
+  };
+  // One step now; repeats begin after the hold delay.
+  const start = (d: 1 | -1) => {
+    stop();
+    dir = d;
+    tempoBox.classList.add("held");
     setBpm(tempo + dir);
-    timer = window.setTimeout(() => repeat(Math.max(HOLD_FASTEST_MS, interval * HOLD_EASE)), interval);
+    timer = window.setTimeout(() => {
+      repeatStart = performance.now();
+      tick();
+    }, HOLD.delayMs);
   };
 
   tempoBox.addEventListener("pointermove", (e) => {
@@ -102,26 +113,30 @@ function wireTempo(): void {
     if (e.button !== 0) return;
     e.preventDefault();
     tempoBox.focus();
-    dir = halfAt(e);
-    showHalf(dir);
+    const d = halfAt(e);
+    showHalf(d);
     tempoBox.setPointerCapture(e.pointerId);
-    tempoBox.classList.add("held");
-    setBpm(tempo + dir); // the click itself steps once
-    timer = window.setTimeout(() => repeat(HOLD_START_MS), HOLD_DELAY_MS);
+    start(d);
   });
   tempoBox.addEventListener("pointerup", stop);
   tempoBox.addEventListener("pointercancel", stop);
   tempoBox.addEventListener("lostpointercapture", stop);
 
-  // Keyboard: arrows step by 1, Shift by 10; Page Up/Down by 10.
+  // Keyboard: holding an arrow uses the same curve (the OS key repeat is
+  // ignored); Shift+arrow and Page Up/Down jump by 10.
   tempoBox.addEventListener("keydown", (e) => {
-    const big = e.shiftKey ? 10 : 1;
-    const step =
-      e.key === "ArrowUp" ? big : e.key === "ArrowDown" ? -big : e.key === "PageUp" ? 10 : e.key === "PageDown" ? -10 : 0;
-    if (!step) return;
+    const d = e.key === "ArrowUp" ? 1 : e.key === "ArrowDown" ? -1 : 0;
+    const jump = e.key === "PageUp" ? 10 : e.key === "PageDown" ? -10 : e.shiftKey && d ? d * 10 : 0;
+    if (!d && !jump) return;
     e.preventDefault();
-    setBpm(tempo + step);
+    if (jump) return setBpm(tempo + jump);
+    if (e.repeat) return; // our own timer is already repeating
+    start(d as 1 | -1);
   });
+  tempoBox.addEventListener("keyup", (e) => {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") stop();
+  });
+  tempoBox.addEventListener("blur", stop);
 }
 
 // 1-indexed bar.beat, the way Live's ruler reads.

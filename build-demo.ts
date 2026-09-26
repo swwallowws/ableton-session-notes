@@ -8,9 +8,14 @@ import * as fs from "node:fs";
 const out = "demo-dist";
 const serve = process.argv.includes("--serve");
 
+const STATIC = ["index.html", "demo.css"];
+const copyStatic = () => {
+  for (const f of STATIC) fs.copyFileSync(`demo/${f}`, `${out}/${f}`);
+};
+
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
-for (const f of ["index.html", "demo.css"]) fs.copyFileSync(`demo/${f}`, `${out}/${f}`);
+copyStatic();
 fs.cpSync("demo/vendor", `${out}/vendor`, { recursive: true });
 
 const options: esbuild.BuildOptions = {
@@ -28,6 +33,8 @@ const options: esbuild.BuildOptions = {
 if (serve) {
   const ctx = await esbuild.context(options);
   await ctx.watch();
+  // esbuild only watches the script; re-copy the page and styles on save too.
+  for (const f of STATIC) fs.watch(`demo/${f}`, copyStatic);
   const { port } = await ctx.serve({ servedir: out, port: 4190 });
   console.log(`demo at http://localhost:${port}/`);
 } else {

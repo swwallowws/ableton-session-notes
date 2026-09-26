@@ -48,7 +48,14 @@
             <button type="button" data-mode="locators" aria-pressed="true">Locators</button>
             <button type="button" data-mode="clips" aria-pressed="false">Clips</button>
           </span>
-          <label class="bpm">Tempo <input id="bpm" type="number" min="40" max="240" step="1" value="120"> BPM</label>
+          <span class="tempo" role="group" aria-labelledby="tempo-label">
+            <span id="tempo-label" class="cap">Tempo</span>
+            <button type="button" class="step" data-step="-1" aria-label="Slower (Shift: 10)">&minus;</button>
+            <input id="bpm" type="number" inputmode="numeric" min="40" max="300" step="1" value="120"
+                   aria-labelledby="tempo-label" title="Drag up or down, or click to type">
+            <button type="button" class="step" data-step="1" aria-label="Faster (Shift: 10)">+</button>
+            <span class="unit">BPM</span>
+          </span>
         </span>
       </div>
       <div class="timeline-scroll">

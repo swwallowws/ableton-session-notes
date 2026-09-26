@@ -79,8 +79,25 @@ textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 .controls { display: flex; align-items: center; gap: calc(var(--space) * 2); flex-wrap: wrap; }
 .seg { display: inline-flex; }
 .seg button + button { border-left: none; }
-.bpm { font: 12px var(--font-mono); color: var(--ink-mut); display: inline-flex; align-items: center; gap: 6px; }
-.bpm input { width: 6ch; font: 12px var(--font-mono); }
+/* Tempo box: a big accent readout you drag or type into, flanked by steppers. */
+.tempo { display: inline-flex; align-items: center; }
+.tempo .cap { margin-right: var(--space); }
+.tempo .step {
+  width: 30px; height: 34px; padding: 0;
+  font: 500 16px/1 var(--font-mono); color: var(--ink-mut);
+}
+.tempo .step:hover { color: var(--acc); }
+.tempo input {
+  width: 5.5ch; height: 34px; padding: 0 4px; margin: 0 -1px;
+  border-color: var(--line); background: var(--ground);
+  font: 600 20px/1 var(--font-mono); color: var(--acc); text-align: center;
+  cursor: ns-resize; -moz-appearance: textfield; appearance: textfield;
+}
+.tempo input:focus { cursor: text; }
+.tempo input.scrubbing { border-color: var(--acc); }
+.tempo input::-webkit-outer-spin-button,
+.tempo input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.tempo .unit { margin-left: var(--space); font: 500 11px/1 var(--font-mono); letter-spacing: .1em; color: var(--ink-mut); }
 
 .timeline-scroll { overflow-x: auto; }
 .timeline { --bars: 16; position: relative; min-width: max(100%, calc(var(--bars) * 44px)); padding-bottom: var(--space); }

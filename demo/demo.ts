@@ -45,10 +45,58 @@ const modeButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-mode
 
 let mode: "locators" | "clips" = "locators";
 
+const BPM_MIN = 40;
+const BPM_MAX = 300;
+const clampBpm = (v: number): number => Math.min(BPM_MAX, Math.max(BPM_MIN, Math.round(v)));
+
 const bpm = (): number => {
   const v = Number(bpmInput.value);
-  return v >= 20 && v <= 400 ? v : 120;
+  return v >= BPM_MIN && v <= BPM_MAX ? v : 120;
 };
+
+function setBpm(v: number): void {
+  bpmInput.value = String(clampBpm(v));
+  render();
+}
+
+// Tempo box, like Live's: drag up/down to change it (4 px per BPM), or click
+// without dragging to type a value. Steppers nudge by 1, Shift by 10.
+function wireTempo(): void {
+  let startY = 0;
+  let startBpm = 0;
+  let dragged = false;
+  bpmInput.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "mouse" || document.activeElement === bpmInput) return;
+    e.preventDefault(); // don't focus yet: this may be a drag
+    startY = e.clientY;
+    startBpm = bpm();
+    dragged = false;
+    bpmInput.setPointerCapture(e.pointerId);
+    bpmInput.classList.add("scrubbing");
+  });
+  bpmInput.addEventListener("pointermove", (e) => {
+    if (!bpmInput.hasPointerCapture(e.pointerId)) return;
+    const dy = startY - e.clientY;
+    if (Math.abs(dy) > 2) dragged = true;
+    if (dragged) setBpm(startBpm + dy / 4);
+  });
+  bpmInput.addEventListener("pointerup", (e) => {
+    if (!bpmInput.hasPointerCapture(e.pointerId)) return;
+    bpmInput.releasePointerCapture(e.pointerId);
+    bpmInput.classList.remove("scrubbing");
+    if (!dragged) {
+      bpmInput.focus();
+      bpmInput.select();
+    }
+  });
+  bpmInput.addEventListener("change", () => setBpm(Number(bpmInput.value) || 120));
+  for (const b of document.querySelectorAll<HTMLButtonElement>(".tempo .step")) {
+    b.addEventListener("click", (e) => {
+      const dir = Number(b.dataset["step"]) || 0;
+      setBpm(bpm() + dir * (e.shiftKey ? 10 : 1));
+    });
+  }
+}
 
 // 1-indexed bar.beat, the way Live's ruler reads.
 const barBeat = (beat: number): string => {
@@ -156,6 +204,7 @@ function setMode(next: "locators" | "clips"): void {
 md.value = EXAMPLE;
 md.addEventListener("input", render);
 bpmInput.addEventListener("input", render);
+wireTempo();
 $("reset").addEventListener("click", () => {
   md.value = EXAMPLE;
   render();

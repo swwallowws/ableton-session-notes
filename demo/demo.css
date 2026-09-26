@@ -79,7 +79,10 @@ textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 /* ---- mock arrangement ---- */
 .controls { display: flex; align-items: center; gap: calc(var(--space) * 2); flex-wrap: wrap; }
 .seg { display: inline-flex; }
-.seg button + button { border-left: none; }
+/* Joined buttons overlap by one pixel instead of dropping a border, and the
+   pressed one sits on top, so its accent outline stays a closed box. */
+.seg button + button { margin-left: -1px; }
+.seg button[aria-pressed="true"] { position: relative; z-index: 1; }
 /* Tempo: the design system's value box (vendor/design/valuebox.css). */
 .tempo { display: inline-flex; align-items: center; gap: var(--space); }
 .tempo .unit { font: 500 11px/1 var(--font-mono); letter-spacing: .1em; color: var(--ink-mut); }
@@ -102,13 +105,14 @@ textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
   font: 600 11px/1.5 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-.lane { position: relative; height: 44px; margin-top: var(--space); background: var(--band); }
+/* The track's name gets its own strip above the clips, so it never covers one. */
+.lane { position: relative; height: 50px; margin-top: var(--space); background: var(--band); }
 .lane-name {
   position: sticky; left: 0; z-index: 1; display: inline-block;
   padding: 0 6px; font: 10px/16px var(--font-mono); color: var(--ink-mut); background: var(--ground-2);
 }
 .clip {
-  position: absolute; top: 16px; height: 26px; padding: 0 6px;
+  position: absolute; top: 20px; height: 26px; padding: 0 6px;
   background: color-mix(in oklab, var(--acc) 70%, var(--ground)); color: var(--ground);
   border-left: 1px solid var(--ground-2);
   font: 600 11px/26px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

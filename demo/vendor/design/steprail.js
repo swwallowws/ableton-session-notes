@@ -1,6 +1,8 @@
 // Step rail: a short numbered list that walks a visitor through a demo.
 // The page says when a step is done; the rail never guesses.
 
+import { iconSvg } from './iconbutton.js';
+
 export function createRail(ids) {
   let i = 0;
   return {
@@ -37,7 +39,8 @@ export function stepRail(el, { steps, onDone, onReset, endText = 'That’s it. E
   const again = document.createElement('button');
   again.type = 'button';
   again.className = 'steprail-reset';
-  again.textContent = 'Start over';
+  again.innerHTML = iconSvg('reset');
+  again.append('Start over');
   el.append(list, end, again);
 
   function paint() {

@@ -6,6 +6,7 @@
   <title>Session Notes: guided walkthrough</title>
   <link rel="stylesheet" href="../vendor/design/tokens.css">
   <link rel="stylesheet" href="../vendor/design/steprail.css">
+  <link rel="stylesheet" href="../vendor/design/iconbutton.css">
   <link rel="stylesheet" href="../vendor/design/demoshell.css">
   <link rel="stylesheet" href="try.css">
   <script>
@@ -21,7 +22,7 @@
 <body>
   <main id="demo">
     <div class="live">
-      <section class="pane note">
+      <section class="pane note" data-demoshell-mark>
         <div class="pane-bar">
           <span class="cap">Note</span>
           <span id="count" class="mut small"></span>
@@ -30,7 +31,7 @@
         <ol id="lines" hidden></ol>
       </section>
 
-      <section class="pane arrangement">
+      <section class="pane arrangement" data-demoshell-mark>
         <div class="pane-bar">
           <span class="cap">Arrangement</span>
           <span role="group" aria-label="Send as" class="seg">

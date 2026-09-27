@@ -1,8 +1,13 @@
 // Demo shell: one page layout for every guided demo. A header (product,
 // title, intro, and a note that this is a demo), then the step rail beside
-// the stage, both starting at the same top line. With ?embed=1 the page is
+// the stage, both starting at the same top line. An optional aside sits under
+// the rail in the rail column (controls, say), and follows the rail on
+// phones. With ?embed=1 the page is
 // transparent, the header goes, the note stays as one small line under the
-// stage, and the page reports its height to the frame around it.
+// stage, and the page reports its height to the frame around it. In both
+// views a faint, still "DEMO" mark lies behind the stage, and Space (plus any
+// single keys the demo names) runs the demo's main action, with a key legend
+// under the rail.
 
 import { stepRail } from './steprail.js';
 
@@ -36,6 +41,144 @@ export function heightReporter(post) {
   };
 }
 
+/** The attribute that sends a child of root to the aside instead of the stage. */
+export const ASIDE_ATTR = 'data-demoshell-aside';
+
+/**
+ * Splits root's existing children: elements marked with ASIDE_ATTR go to the
+ * aside (under the rail), everything else to the stage, order kept.
+ */
+export function splitContent(nodes) {
+  const stage = [];
+  const aside = [];
+  for (const n of nodes) {
+    const toAside = n && n.nodeType === 1 && typeof n.hasAttribute === 'function' && n.hasAttribute(ASIDE_ATTR);
+    (toAside ? aside : stage).push(n);
+  }
+  return { stage, aside };
+}
+
+// ---- keyboard: Space for the demo's main action, single keys for others ----
+
+/** The name a binding uses: "Space" for the space bar, letters in lower case. */
+export function keyName(key) {
+  if (key === ' ' || key === 'Spacebar' || key === 'Space') return 'Space';
+  return key.length === 1 ? key.toLowerCase() : key;
+}
+
+/**
+ * The bindings for demoShell's primary and keys options, as a Map from key
+ * name to { run, label }. Space is the primary's toggle. A key given as a bare
+ * function works but has no label, so it stays out of the legend.
+ */
+export function keyBindings({ primary, keys } = {}) {
+  const map = new Map();
+  if (primary) map.set('Space', { run: () => primary.toggle(), label: primary.label });
+  for (const [k, v] of Object.entries(keys ?? {})) {
+    const b = typeof v === 'function' ? { run: v, label: null } : { run: () => v.run(), label: v.label };
+    map.set(keyName(k), b);
+  }
+  return map;
+}
+
+const TEXT_ROLES = new Set(['textbox', 'searchbox', 'combobox']);
+const SPACE_ROLES = new Set(['button', 'checkbox', 'switch', 'radio', 'tab', 'option', 'menuitem', 'menuitemcheckbox', 'menuitemradio']);
+const SPACE_INPUTS = new Set(['button', 'submit', 'reset', 'checkbox', 'radio', 'image', 'color', 'file', 'range']);
+
+/**
+ * True when the focused element uses this key itself: fields take every key,
+ * buttons and other Space-pressable controls take Space.
+ */
+export function ownsKey(target, name) {
+  if (!target) return false;
+  if (target.isContentEditable) return true;
+  const tag = String(target.tagName || '').toUpperCase();
+  const role = typeof target.getAttribute === 'function' ? target.getAttribute('role') : null;
+  if (tag === 'TEXTAREA' || tag === 'SELECT' || TEXT_ROLES.has(role)) return true;
+  if (tag === 'INPUT') {
+    const type = String(target.type || 'text').toLowerCase();
+    return SPACE_INPUTS.has(type) ? name === 'Space' : true;
+  }
+  if (tag === 'BUTTON' || tag === 'SUMMARY' || SPACE_ROLES.has(role)) return name === 'Space';
+  return false;
+}
+
+/** The binding a keydown should run, or null when the page should leave it be. */
+export function routeKey(e, bindings) {
+  if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return null;
+  const name = keyName(e.key);
+  const b = bindings.get(name);
+  if (!b || ownsKey(e.target, name)) return null;
+  return b;
+}
+
+/** Legend entries for the rail: [{ key: 'Space', label: 'play' }, { key: 'R', ... }]. */
+export function keyLegend(bindings) {
+  const out = [];
+  for (const [name, b] of bindings) {
+    if (!b.label) continue;
+    out.push({ key: name.length === 1 ? name.toUpperCase() : name, label: b.label });
+  }
+  return out;
+}
+
+// ---- the demo mark: a faint, still "DEMO" behind the demo ----
+
+/** No mark on or behind this element (it gets a ground unless it has its own). */
+export const NOMARK_ATTR = 'data-demoshell-nomark';
+/** A mark of its own for an element deeper in the stage (a nested editor). */
+export const MARK_ATTR = 'data-demoshell-mark';
+export const MARK_WORD = 'DEMO';
+
+/** The mark's text: the word, count times; CSS spaces it into a tiled grid. */
+export function markText(count) {
+  return Array.from({ length: count }, () => MARK_WORD).join(' ');
+}
+
+// Elements that cannot hold a child layer, or are controls, not surfaces.
+const NO_LAYER = new Set(['CANVAS', 'IMG', 'VIDEO', 'AUDIO', 'IFRAME', 'OBJECT', 'EMBED', 'TEXTAREA', 'INPUT', 'SELECT', 'BUTTON', 'SVG', 'PICTURE']);
+
+function transparent(color) {
+  const c = String(color || '').trim();
+  if (!c || c === 'transparent') return true;
+  const rgba = c.match(/^rgba\([^)]*,\s*([\d.]+%?)\s*\)$/);
+  const slash = c.match(/\/\s*([\d.]+%?)\s*\)$/);
+  const a = rgba?.[1] ?? slash?.[1];
+  return a != null && parseFloat(a) === 0;
+}
+
+/**
+ * Whether an element in the stage gets a mark of its own, behind its content:
+ * a surface with its own background (an editor, a roll, a panel), or one
+ * that asks with data-demoshell-mark. Transparent ones show the stage's mark.
+ */
+export function wantsMark({ tagName, background, nomark = false, optIn = false }) {
+  if (nomark || NO_LAYER.has(String(tagName).toUpperCase())) return false;
+  return optIn || !transparent(background);
+}
+
+function markEl() {
+  const mark = el('div', 'demoshell-mark', markText(1200));
+  mark.setAttribute('aria-hidden', 'true');
+  return mark;
+}
+
+function markSurfaces(stage) {
+  const surfaces = new Set([...stage.children, ...stage.querySelectorAll(`[${MARK_ATTR}]`)]);
+  for (const s of surfaces) {
+    if (s.classList.contains('demoshell-mark')) continue;
+    const want = wantsMark({
+      tagName: s.tagName,
+      background: getComputedStyle(s).backgroundColor,
+      nomark: s.hasAttribute(NOMARK_ATTR),
+      optIn: s.hasAttribute(MARK_ATTR),
+    });
+    if (!want) continue;
+    s.classList.add('demoshell-marked');
+    s.prepend(markEl());
+  }
+}
+
 function el(tag, className, text) {
   const e = document.createElement(tag);
   if (className) e.className = className;
@@ -59,11 +202,12 @@ function noteEl(full, embed) {
 }
 
 export function demoShell(root, {
-  product, title, intro, steps, full, onDone, onReset, endText,
+  product, title, intro, steps, full, onDone, onReset, endText, primary, keys,
   embed = isEmbed(location.search),
 }) {
-  // Whatever the page already put inside root becomes the stage's content.
-  const existing = [...root.childNodes];
+  // Whatever the page already put inside root becomes the stage's content,
+  // except elements marked data-demoshell-aside, which go under the rail.
+  const parts = splitContent([...root.childNodes]);
 
   root.classList.add('demoshell');
   root.toggleAttribute('data-embed', embed);
@@ -77,18 +221,48 @@ export function demoShell(root, {
   const railCol = el('aside', 'demoshell-rail');
   railCol.setAttribute('aria-label', 'Steps');
   const railEl = el('div');
-  railCol.append(railEl);
+  // The aside: optional controls under the rail. Empty, it takes no space.
+  const aside = el('div', 'demoshell-aside');
+  aside.append(...parts.aside);
+  // The key legend: "Space: play", one line per key. Empty, it takes no space.
+  const bindings = keyBindings({ primary, keys });
+  const legend = el('p', 'demoshell-keys');
+  for (const { key, label } of keyLegend(bindings)) {
+    const line = el('span', 'demoshell-key');
+    line.append(el('kbd', null, key), `: ${label}`);
+    legend.append(line);
+  }
+  railCol.append(railEl, legend, aside);
   const stage = el('div', 'demoshell-stage');
-  stage.append(...existing);
+  stage.append(...parts.stage);
   body.append(railCol, stage);
 
   const note = noteEl(full, embed);
   if (embed) root.replaceChildren(body, note);
   else { head.append(note); root.replaceChildren(head, body); }
 
+  // The mark, in both views: behind the stage's empty areas, and behind the
+  // content of each stage surface with its own background, so a screenshot
+  // cannot pass for the product. Faint, still, and out of the way of the
+  // pointer and of assistive tech. Measured once the page's styles apply.
+  if (!root.hasAttribute(NOMARK_ATTR)) {
+    markSurfaces(stage);
+    stage.prepend(markEl());
+  }
+
   const railOpts = { steps, onDone, onReset };
   if (endText != null) railOpts.endText = endText;
   const rail = stepRail(railEl, railOpts);
+
+  if (bindings.size) {
+    document.addEventListener('keydown', (e) => {
+      const b = routeKey(e, bindings);
+      if (!b) return;
+      e.preventDefault(); // Space must not scroll the page
+      if (e.repeat) return; // holding a key toggles once
+      b.run();
+    });
+  }
 
   if (embed && window.parent !== window && typeof ResizeObserver === 'function') {
     const report = heightReporter((m) => window.parent.postMessage(m, '*'));
@@ -97,5 +271,5 @@ export function demoShell(root, {
     measure();
   }
 
-  return { stage, rail };
+  return { stage, rail, aside };
 }

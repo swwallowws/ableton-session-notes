@@ -27,6 +27,9 @@
   --line:     light-dark(#c9c7bf, #333333);
   --ink:      light-dark(#111111, #f2f2ee);
   --ink-mut:  light-dark(#6b6a64, #8a8a85);
+  /* The demo shell's "DEMO" mark: always away from the text, so it lifts
+     contrast in Paper and costs only what check-contrast.mjs allows in Night. */
+  --mark:     light-dark(#ffffff, #262626);
 
   /* Without a category the accent is ink. */
   --acc: var(--ink);
@@ -66,6 +69,7 @@
     --line: #c9c7bf;
     --ink: #111111;
     --ink-mut: #6b6a64;
+    --mark: #ffffff;
   }
   [data-category="transcribe"] { --acc: #007489; }
   [data-category="transform"]  { --acc: #c23900; }

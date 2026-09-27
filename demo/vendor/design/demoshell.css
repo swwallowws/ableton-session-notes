@@ -52,13 +52,59 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
 /* The rail's first line box starts half a leading above its text; pull it up
    by that much so the text, not the box, meets the stage's top edge. */
 .demoshell-rail { position: sticky; top: calc(var(--space) * 2); margin-top: -.25em; }
-.demoshell-stage { min-width: 0; }
+.demoshell-stage { min-width: 0; position: relative; isolation: isolate; }
+/* Optional controls under the rail (data-demoshell-aside); none, no space. */
+.demoshell-aside { margin-top: calc(var(--space) * 4); }
+.demoshell-aside:empty { display: none; }
+
+/* ---- key legend under the rail: "Space: play" ---- */
+.demoshell-keys {
+  display: grid;
+  gap: calc(var(--space) / 2);
+  margin: calc(var(--space) * 3) 0 0;
+  font: 12px/1.4 var(--font-sans);
+  color: var(--ink-mut);
+}
+.demoshell-keys:empty { display: none; }
+.demoshell-keys kbd { font: 500 11px/1.4 var(--font-mono); color: var(--ink); }
+/* Touch-only screens have no keys to press. */
+@media (hover: none) and (pointer: coarse) { .demoshell-keys { display: none; } }
+
+/* ---- the demo mark: a faint, still "DEMO" tiled behind the demo ----
+   One layer behind the whole stage (its empty areas), and one inside each
+   stage container with its own background (editors, rolls, panels), behind
+   that container's content, so a screenshot cannot pass for the product.
+   It never lies over text: --mark tints the ground away from the text, and
+   check-contrast.mjs holds every text token at 4.5:1 over it. */
+.demoshell { --demoshell-mark-opacity: .8; }
+.demoshell-marked { isolation: isolate; }
+:where(.demoshell-marked) { position: relative; }
+.demoshell-mark {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  padding: calc(var(--space) * 2);
+  color: var(--mark);
+  opacity: var(--demoshell-mark-opacity);
+  font: 600 11px/calc(var(--space) * 5) var(--font-mono);
+  letter-spacing: .3em;
+  word-spacing: 5em;
+  overflow-wrap: normal;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Opted out: no mark of its own, and a ground that covers the stage's mark
+   unless the element sets its own background. */
+:where(.demoshell-stage [data-demoshell-nomark]) { background-color: var(--ground); }
 
 @media (max-width: 720px) {
   .demoshell { padding: calc(var(--space) * 3) 16px calc(var(--space) * 6); }
   .demoshell-head { padding-bottom: calc(var(--space) * 3); margin-bottom: calc(var(--space) * 3); }
   .demoshell-body { grid-template-columns: minmax(0, 1fr); }
   .demoshell-rail { position: static; }
+  .demoshell-aside { margin-top: calc(var(--space) * 3); }
 }
 
 /* ---- embed (?embed=1): transparent, no header, the note under the stage ---- */

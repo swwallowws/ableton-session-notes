@@ -11,5 +11,7 @@
 .steprail-step[data-state="done"]::before { content: "\2713"; }
 .steprail-hint { grid-column: 2; font-size: .85em; color: var(--ink-mut); }
 .steprail-end { margin: 14px 0 0; }
-.steprail-reset { margin-top: 8px; background: none; border: 0; padding: 0; color: var(--ink-mut); text-decoration: underline; cursor: pointer; font: inherit; }
+.steprail-reset { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; background: none; border: 0; padding: 0; color: var(--ink-mut); text-decoration: underline; cursor: pointer; font: inherit; }
+.steprail-reset .ds-icon { width: 12px; height: 12px; flex: none; }
+.steprail-reset:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .steprail-step { transition: none; } }

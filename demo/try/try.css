@@ -1,54 +1,23 @@
-/* Session Notes guided walkthrough. Colours, type and shape come from the
-   shared design system (../vendor/design/tokens.css, steprail.css); this
-   file only lays the try page out. */
-
-* { box-sizing: border-box; }
-body {
-  margin: 0; background: var(--ground); color: var(--ink);
-  font: 15px/1.55 var(--font-sans); font-variant-numeric: tabular-nums;
-  -webkit-font-smoothing: antialiased;
-  padding: calc(var(--space) * 4) 16px calc(var(--space) * 6);
-  max-width: 1080px; margin-inline: auto;
-}
-.embed body { padding: 12px; max-width: none; }
-.embed .intro { display: none; }
+/* Session Notes guided walkthrough. The page layout comes from the design
+   system's demo shell (../vendor/design/demoshell.css); this file only styles
+   the live piece: the note, the mock arrangement and its two-row ruler. */
 
 .mut { color: var(--ink-mut); }
-a { color: var(--ink); text-decoration-color: var(--acc); text-underline-offset: 3px; }
 .small { font-size: 12px; }
 code { font: 0.9em var(--font-mono); }
-.eyebrow, .cap {
+.cap {
   margin: 0; font: 500 11px/1.4 var(--font-mono); letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink-mut);
 }
-.head {
-  margin: calc(var(--space) * 1.5) 0 0; font-size: clamp(1.6rem, 4.5vw, 2.4rem);
-  font-stretch: var(--head-stretch); font-weight: var(--head-weight);
-  letter-spacing: var(--head-tracking); line-height: .98;
-}
-.intro { margin-bottom: calc(var(--space) * 4); }
-.intro p.mut { max-width: 62ch; margin: calc(var(--space) * 2) 0 0; }
+.after { margin: calc(var(--space) * 2) 0 0; }
+.after a { color: var(--ink); text-decoration-color: var(--acc); text-underline-offset: 3px; }
 
-button { font: inherit; color: var(--ink); background: var(--ground-2); border: var(--hairline); border-radius: var(--radius); padding: 3px var(--space); cursor: pointer; font: 500 12px/1.4 var(--font-mono); }
+button { color: var(--ink); background: var(--ground-2); border: var(--hairline); border-radius: var(--radius); padding: 3px var(--space); cursor: pointer; font: 500 12px/1.4 var(--font-mono); }
 button:hover { background: var(--band); }
 button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
 :focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
-/* ---- layout: rail beside the live piece, rail moves above it when narrow ---- */
-.try {
-  display: grid; gap: calc(var(--space) * 2);
-  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
-  grid-template-areas: "rail live";
-  align-items: start;
-}
-.rail-wrap { grid-area: rail; position: sticky; top: calc(var(--space) * 2); }
-.live { grid-area: live; display: grid; gap: calc(var(--space) * 2); min-width: 0; }
-@media (max-width: 720px) {
-  .try { grid-template-columns: 1fr; grid-template-areas: "rail" "live"; }
-  .rail-wrap { position: static; }
-}
-
-.after { margin: calc(var(--space) * 2) 0 0; }
+.live { display: grid; gap: calc(var(--space) * 2); min-width: 0; }
 
 .pane { border: var(--hairline); background: var(--ground-2); display: flex; flex-direction: column; min-width: 0; }
 .pane-bar {
@@ -57,40 +26,51 @@ button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
 }
 
 textarea {
-  flex: 1 0 auto; min-height: 120px; resize: none; overflow: hidden; border: 0; margin: 0;
+  display: block; width: 100%; resize: none; overflow: hidden; border: 0; margin: 0;
   padding: calc(var(--space) * 1.5); background: var(--ground-2); color: var(--ink);
   font: 13.5px/1.6 var(--font-mono);
 }
 textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 .hint { margin: 0; padding: var(--space) calc(var(--space) * 1.5); border-top: var(--hairline); font-size: 12px; }
 
-/* ---- mock arrangement ---- */
+/* ---- mock arrangement: fits the pane's width, never scrolls ---- */
 .seg { display: inline-flex; }
 .seg button + button { margin-left: -1px; }
 .seg button[aria-pressed="true"] { position: relative; z-index: 1; }
 
-.timeline-scroll { overflow-x: auto; }
-.timeline { --bars: 16; position: relative; min-width: max(100%, calc(var(--bars) * 44px)); padding-bottom: var(--space); }
-/* Guided page only: the ruler always fits the pane's width, so a retimed
-   line never needs a scroll to come into view (view.ts scales the range in
-   instead). */
-.timeline.fit { min-width: 100%; }
+.timeline { position: relative; overflow: hidden; padding-bottom: var(--space); }
 .track { display: block; }
 
+/* Two rows: bar numbers on top, the clock time at each bar under them. The
+   row the first line's tag counts in is lit, and so is the tick it names. */
 .ruler {
-  position: relative; height: 72px; border-bottom: var(--hairline);
+  position: relative; height: 80px; border-bottom: var(--hairline);
   background: var(--ground);
 }
-.ruler .bar {
-  position: absolute; top: 0; height: 18px; padding-left: 3px;
+.ruler .bar, .ruler .sec {
+  position: absolute; height: 18px; padding-left: 3px;
   border-left: var(--hairline); font: 10px/18px var(--font-mono); color: var(--ink-mut);
+  white-space: nowrap;
 }
-.locator { position: absolute; top: 18px; bottom: 0; border-left: 2px solid var(--acc); }
+.ruler .bar { top: 0; }
+.ruler .sec { top: 18px; }
+.ruler[data-scale]::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: var(--band);
+}
+.ruler[data-scale="seconds"]::before { top: 18px; }
+.ruler[data-scale="bars"] .bar,
+.ruler[data-scale="seconds"] .sec { color: var(--ink); }
+.ruler .bar.on, .ruler .sec.on { color: var(--acc); font-weight: 700; }
+
+.locator { position: absolute; top: 36px; bottom: 0; border-left: 2px solid var(--acc); }
 .locator .flag {
   position: absolute; top: 0; left: 0; max-width: 160px;
   padding: 1px 6px; background: var(--acc); color: var(--ground);
   font: 600 11px/1.5 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Lines sit one bar apart; every other flag drops a row so each has two
+   bars of room before the next flag on its row. */
+.locator:nth-of-type(even) .flag { top: 20px; }
 
 .lane { position: relative; height: 50px; margin-top: var(--space); background: var(--band); }
 .lane-name {
@@ -102,4 +82,11 @@ textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
   background: color-mix(in oklab, var(--acc) 70%, var(--ground)); color: var(--ground);
   border-left: 1px solid var(--ground-2);
   font: 600 11px/26px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Narrow panes: label every other second (0:00, 0:04, 0:08 ...), which
+   still names both bar 5 (0:08) and bar 9 (0:16). */
+@media (max-width: 720px) {
+  .ruler .bar, .ruler .sec { font-size: 9px; padding-left: 2px; }
+  .ruler .sec.odd, .ruler[data-scale="seconds"] .sec.odd { color: transparent; }
 }

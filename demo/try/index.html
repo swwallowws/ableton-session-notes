@@ -6,32 +6,20 @@
   <title>Session Notes: guided walkthrough</title>
   <link rel="stylesheet" href="../vendor/design/tokens.css">
   <link rel="stylesheet" href="../vendor/design/steprail.css">
+  <link rel="stylesheet" href="../vendor/design/demoshell.css">
   <link rel="stylesheet" href="try.css">
   <script>
     // Set the mode before first paint: ?theme=paper|night (from the showcase
-    // frame) wins; otherwise the system scheme applies. ?embed=1 drops the
-    // page intro so the demo fills a frame.
+    // frame) wins; otherwise the system scheme applies. The demo shell
+    // handles ?embed=1.
     (function () {
-      var q = new URLSearchParams(location.search);
-      var t = q.get("theme");
+      var t = new URLSearchParams(location.search).get("theme");
       if (t === "paper" || t === "night") document.documentElement.dataset.theme = t;
-      if (q.get("embed") === "1") document.documentElement.classList.add("embed");
     })();
   </script>
 </head>
 <body>
-  <header class="intro">
-    <p class="eyebrow">Session Notes · a guided line</p>
-    <h1 class="head">Follow the steps, watch a line land.</h1>
-    <p class="mut">Three moves on one verse: tag a line to a bar, retime it to a clock, then send it to the arrangement as clips. This runs Ableton Live Session Notes' real timing code, the same as the full <a href="../">playground</a>.</p>
-  </header>
-
-  <main class="try">
-    <aside class="rail-wrap">
-      <div id="rail"></div>
-      <p class="after mut small" id="after" hidden><a href="../">Open the full playground</a></p>
-    </aside>
-
+  <main id="demo">
     <div class="live">
       <section class="pane note">
         <div class="pane-bar">
@@ -40,7 +28,7 @@
         </div>
         <textarea id="md" spellcheck="false" aria-label="Note text (Markdown)"></textarea>
         <ol id="lines" hidden></ol>
-        <p class="hint mut">Tags: <code>[17]</code> bar · <code>[1:04]</code> timecode.</p>
+        <p class="hint mut"><code>[9]</code> bar 9 · <code>[0:08]</code> eight seconds</p>
       </section>
 
       <section class="pane arrangement">
@@ -51,11 +39,10 @@
             <button type="button" data-mode="clips" aria-pressed="false">Clips</button>
           </span>
         </div>
-        <div class="timeline-scroll">
-          <div id="timeline" class="timeline fit" role="img" aria-label="Mock Ableton Live arrangement showing where the line lands"></div>
-        </div>
+        <div id="timeline" class="timeline" role="img" aria-label="Mock Ableton Live arrangement showing where the line lands, with a bar row and a seconds row"></div>
       </section>
     </div>
+    <p class="after mut small" id="after" hidden><a href="../">Open the full playground</a></p>
   </main>
 
   <script src="try.js"></script>

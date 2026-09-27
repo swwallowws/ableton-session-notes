@@ -1,20 +1,16 @@
 // Guided walkthrough for Session Notes' lyric timing: the same render as the
-// full playground (../demo.ts), narrowed to one verse and walked through by
-// the design system's step rail. Tempo is fixed; there is no tempo box here.
+// full playground (../demo.ts), narrowed to one short verse, laid out by the
+// design system's demo shell and walked through by its step rail. Tempo is
+// fixed at 120 BPM, so one bar is two seconds; the ruler shows both.
 
-import { stepRail } from "../vendor/design/steprail.js";
+import { demoShell } from "../vendor/design/demoshell.js";
 import { render as renderView, type Mode } from "../view.js";
-import { stepFor } from "./steps.js";
+import { VERSE, activeTag, stepFor } from "./steps.js";
 
 const BPM = 120;
-
-// The verse this walkthrough is built around (untagged - step one is adding
-// the first tag).
-const VERSE = `Salt on the window, the kettle's low hum
-I hum the chorus before it has come
-Counting the bars on the back of my hand
-Every line lands where I told it to land
-`;
+// Bar 9 plus the three lines that flow after it, and one bar of room: the
+// ruler holds this range for both steps, so [0:08] visibly moves the line left.
+const RULER_BARS = 13;
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -33,12 +29,14 @@ let mode: Mode = "locators";
 const doneSteps = new Set<string>();
 
 function render(): void {
-  renderView({ md, linesEl, countEl, timeline }, { bpm: BPM, mode, fitRuler: true });
+  renderView(
+    { md, linesEl, countEl, timeline },
+    { bpm: BPM, mode, scales: { mark: activeTag(md.value, BPM), minBars: RULER_BARS } },
+  );
 }
 
 // Advances the rail when the current text/mode satisfies the next step it's
-// waiting on. The rail never guesses on its own - it only moves on when we
-// tell it to.
+// waiting on. The rail never guesses on its own.
 function checkStep(): void {
   const id = stepFor(md.value, mode, doneSteps);
   if (id) {
@@ -60,12 +58,21 @@ const fit = () => {
   md.style.height = `${md.scrollHeight + 2}px`;
 };
 
-const rail = stepRail($("rail"), {
+const { rail } = demoShell($("demo"), {
+  product: "Session Notes",
+  title: "Tag a lyric line, watch it land.",
+  intro:
+    "Lyrics in a note, placed in Ableton Live's arrangement by a tag at the start of a line. This runs Session Notes' real timing code at 120 BPM, where one bar is two seconds.",
   steps: [
-    { id: "tag", label: "Type [17] in front of the first line" },
-    { id: "time", label: "Change it to [1:04]" },
+    { id: "tag", label: "Type [9] in front of the first line", hint: "A plain number is a bar: the line lands on bar 9." },
+    { id: "time", label: "Change it to [0:08]", hint: "A colon makes it a time: 0:08 is eight seconds in, which is bar 5." },
     { id: "mode", label: "Show it as clips on a Lyrics track" },
   ],
+  full: {
+    label: "extension for Ableton Live 12",
+    href: "https://github.com/swwallowws/ableton-session-notes/releases",
+    where: "on GitHub",
+  },
   onDone: () => {
     after.hidden = false;
   },
@@ -79,6 +86,9 @@ const rail = stepRail($("rail"), {
     after.hidden = true;
   },
 });
+
+// The playground link sits under the rail, shown once the steps are done.
+document.querySelector(".demoshell-rail")?.append(after);
 
 md.value = VERSE;
 md.addEventListener("input", () => {

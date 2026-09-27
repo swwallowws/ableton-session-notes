@@ -1,0 +1,68 @@
+/* Demo shell (demoshell.js): one page layout for every guided demo.
+   Link after tokens.css and steprail.css. The stage is sized by what the
+   demo puts in it; the shell gives it no height of its own. */
+
+body:has(.demoshell) { margin: 0; background: var(--ground); }
+
+.demoshell {
+  box-sizing: border-box;
+  max-width: 1080px;
+  margin-inline: auto;
+  padding: calc(var(--space) * 5) calc(var(--space) * 3) calc(var(--space) * 8);
+  color: var(--ink);
+  font: 15px/1.55 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+.demoshell *, .demoshell *::before, .demoshell *::after { box-sizing: inherit; }
+
+/* ---- header: product, title, intro, the demo note ---- */
+.demoshell-head {
+  padding-bottom: calc(var(--space) * 4);
+  margin-bottom: calc(var(--space) * 4);
+  border-bottom: var(--hairline);
+}
+.demoshell-eyebrow {
+  margin: 0 0 calc(var(--space) * 1.5);
+  font: 500 12px/1.4 var(--font-mono);
+  color: var(--ink-mut);
+}
+.demoshell-title {
+  margin: 0;
+  max-width: 22ch;
+  font-size: clamp(1.75rem, 4.2vw, 2.75rem);
+  font-stretch: var(--head-stretch);
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-tracking);
+  line-height: .95;
+  text-wrap: balance;
+}
+.demoshell-intro { max-width: 62ch; margin: calc(var(--space) * 2) 0 0; color: var(--ink-mut); }
+.demoshell-note { max-width: 62ch; margin: calc(var(--space) * 2) 0 0; font-size: 13px; color: var(--ink-mut); }
+.demoshell-note a { color: var(--ink); text-decoration-color: var(--acc); text-underline-offset: 3px; }
+.demoshell-note a:focus-visible { outline: 1px solid var(--acc); outline-offset: 2px; }
+
+/* ---- body: rail column and stage column, one shared top line ---- */
+.demoshell-body {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  column-gap: calc(var(--space) * 5);
+  row-gap: calc(var(--space) * 3);
+  align-items: start;
+}
+/* The rail's first line box starts half a leading above its text; pull it up
+   by that much so the text, not the box, meets the stage's top edge. */
+.demoshell-rail { position: sticky; top: calc(var(--space) * 2); margin-top: -.25em; }
+.demoshell-stage { min-width: 0; }
+
+@media (max-width: 720px) {
+  .demoshell { padding: calc(var(--space) * 3) 16px calc(var(--space) * 6); }
+  .demoshell-head { padding-bottom: calc(var(--space) * 3); margin-bottom: calc(var(--space) * 3); }
+  .demoshell-body { grid-template-columns: minmax(0, 1fr); }
+  .demoshell-rail { position: static; }
+}
+
+/* ---- embed (?embed=1): transparent, no header, the note under the stage ---- */
+html.demoshell-embed, html.demoshell-embed body { background: transparent; }
+.demoshell[data-embed] { max-width: none; padding: 4px; }
+.demoshell[data-embed] .demoshell-rail { position: static; }
+.demoshell[data-embed] .demoshell-note { max-width: none; margin-top: calc(var(--space) * 2); font-size: 12px; }

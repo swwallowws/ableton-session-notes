@@ -28,21 +28,26 @@ export interface RenderOpts {
   bpm: number;
   mode: Mode;
   beatsPerBar?: number;
-  // When true, the ruler always spans bar 1 through at least two bars past
-  // the last placed line (minimum 18 bars), scaled to fit the container
-  // width with no horizontal scroll, and eases into a new range over ~600ms
-  // when that range changes (skipped under prefers-reduced-motion). Used by
-  // the guided try page, which narrows to one verse and needs the retimed
-  // line to stay on screen. Default false keeps the full playground's
-  // original content-sized, scrollable ruler.
-  fitRuler?: boolean;
+  // When set, the ruler gets a second row under the bar numbers with the
+  // clock time at each bar (at opts.bpm), and `mark` lights the row a tag
+  // counts in plus the tick it lands on, and the ruler never shows fewer than
+  // minBars bars, so a retimed line visibly moves against a steady ruler.
+  // Used by the guided try page to show what changes between a bar tag and a
+  // clock tag. Left out (the default), the ruler is the full playground's
+  // single bar row, sized to its content.
+  scales?: { mark: ScaleMark | null; minBars?: number };
 }
 
-const MIN_FIT_BARS = 18;
-const RANGE_EASE_MS = 600;
+export interface ScaleMark {
+  scale: "bars" | "seconds";
+  beat: number;
+}
 
-const prefersReducedMotion = (): boolean =>
-  typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Whole seconds as m:ss, the way a clock tag is typed ([0:08]).
+export const secondsLabel = (beat: number, bpm: number): string => {
+  const s = Math.round((beat * 60) / bpm);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
 
 // 1-indexed bar.beat, the way Live's ruler reads.
 export const barBeat = (beat: number, beatsPerBar = BEATS_PER_BAR): string => {
@@ -100,7 +105,7 @@ export function render(els: ViewEls, opts: RenderOpts): void {
     locators.map((l, i) => ({ ...l, time: placed[i] ?? l.time })),
     clips,
     beatsPerBar,
-    opts.fitRuler ?? false,
+    opts.scales ? { bpm: opts.bpm, ...opts.scales } : undefined,
   );
 }
 
@@ -110,43 +115,41 @@ export function drawTimeline(
   locators: Locator[],
   clips: ClipPlan[],
   beatsPerBar = BEATS_PER_BAR,
-  fitRuler = false,
+  scales?: { bpm: number; mark: ScaleMark | null; minBars?: number },
 ): void {
-  let bars: number;
-  if (fitRuler) {
-    // Bar 1 through at least two bars past the last placed line, never
-    // narrower than MIN_FIT_BARS, so a retimed line can't land off screen.
-    const lastPlacedBeat = Math.max(
-      0,
-      ...locators.map((l) => l.time),
-      ...clips.map((c) => c.startTime + c.duration),
-    );
-    const lastPlacedBar = Math.floor(lastPlacedBeat / beatsPerBar) + 1;
-    bars = Math.max(MIN_FIT_BARS, lastPlacedBar + 2);
-  } else {
-    const lastBeat = Math.max(
-      16,
-      ...locators.map((l) => l.time + 4),
-      ...clips.map((c) => c.startTime + c.duration),
-    );
-    bars = Math.ceil(lastBeat / beatsPerBar) + 1;
-  }
+  const lastBeat = Math.max(
+    16,
+    ...locators.map((l) => l.time + 4),
+    ...clips.map((c) => c.startTime + c.duration),
+  );
+  const bars = Math.max(Math.ceil(lastBeat / beatsPerBar) + 1, scales?.minBars ?? 0);
   const pct = (beat: number) => `${(beat / (bars * beatsPerBar)) * 100}%`;
 
-  const prevBars = fitRuler ? Number(timeline.dataset["bars"] ?? 0) : 0;
   timeline.dataset["bars"] = String(bars);
   timeline.style.setProperty("--bars", String(bars));
 
   timeline.replaceChildren();
-  // Ruler and lane share one wrapper so a range change can ease both of them
-  // together with a single transform (see the FLIP animation below).
   const track = node("div", "track");
 
   const ruler = node("div", "ruler");
+  const mark = scales?.mark ?? null;
+  // The tick the mark lands on, when it sits exactly on a bar line.
+  const markBar = mark && mark.beat % beatsPerBar === 0 ? mark.beat / beatsPerBar : -1;
+  if (scales) {
+    ruler.classList.add("scales");
+    if (mark) ruler.dataset["scale"] = mark.scale;
+  }
   for (let b = 0; b < bars; b++) {
     const tick = node("span", "bar", String(b + 1));
     tick.style.left = pct(b * beatsPerBar);
+    if (mark?.scale === "bars" && b === markBar) tick.classList.add("on");
     ruler.append(tick);
+    if (scales) {
+      const sec = node("span", b % 2 ? "sec odd" : "sec", secondsLabel(b * beatsPerBar, scales.bpm));
+      sec.style.left = pct(b * beatsPerBar);
+      if (mark?.scale === "seconds" && b === markBar) sec.classList.add("on");
+      ruler.append(sec);
+    }
   }
   track.append(ruler);
 
@@ -171,27 +174,4 @@ export function drawTimeline(
   }
   track.append(lane);
   timeline.append(track);
-
-  // Every position above is linear in 1/bars, so a uniform horizontal scale
-  // reproduces exactly what the in-between layout would look like: paint the
-  // new (correct) layout, scale it back to look like the old one, then ease
-  // the scale to 1. Left-anchored (bar 1 never moves), skipped when the
-  // range didn't actually change, on first paint, or under reduced motion.
-  if (fitRuler && prevBars > 0 && prevBars !== bars && !prefersReducedMotion()) {
-    track.style.transformOrigin = "left top";
-    track.style.transform = `scaleX(${bars / prevBars})`;
-    track.getBoundingClientRect(); // force layout before easing, so the jump above isn't itself animated
-    track.style.transition = `transform ${RANGE_EASE_MS}ms ease`;
-    requestAnimationFrame(() => {
-      track.style.transform = "scaleX(1)";
-    });
-    track.addEventListener(
-      "transitionend",
-      () => {
-        track.style.transition = "";
-        track.style.transform = "";
-      },
-      { once: true },
-    );
-  }
 }

@@ -4,5 +4,13 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "rootDir": ".."
   },
-  "include": ["demo.ts", "vendor/design/valuebox.d.ts", "../src/timeline.ts"]
+  "include": [
+    "demo.ts",
+    "view.ts",
+    "try/try.ts",
+    "try/steps.ts",
+    "vendor/design/valuebox.d.ts",
+    "vendor/design/steprail.d.ts",
+    "../src/timeline.ts"
+  ]
 }

@@ -1,0 +1,15 @@
+/* Step rail (steprail.js): a short numbered list that walks a visitor
+   through a demo. Steps dim until they're current, then settle once done.
+   Link after tokens.css. */
+
+.steprail { font: 15px/1.5 var(--font-sans); color: var(--ink); }
+.steprail ol { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 10px; }
+.steprail-step { counter-increment: step; display: grid; grid-template-columns: 2ch 1fr; column-gap: 10px; opacity: .45; transition: opacity 900ms ease; }
+.steprail-step::before { content: counter(step); font-family: var(--font-mono); }
+.steprail-step[data-state="current"] { opacity: 1; }
+.steprail-step[data-state="done"] { opacity: .7; }
+.steprail-step[data-state="done"]::before { content: "\2713"; }
+.steprail-hint { grid-column: 2; font-size: .85em; color: var(--ink-mut); }
+.steprail-end { margin: 14px 0 0; }
+.steprail-reset { margin-top: 8px; background: none; border: 0; padding: 0; color: var(--ink-mut); text-decoration: underline; cursor: pointer; font: inherit; }
+@media (prefers-reduced-motion: reduce) { .steprail-step { transition: none; } }

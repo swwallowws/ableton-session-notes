@@ -33,7 +33,7 @@ let mode: Mode = "locators";
 const doneSteps = new Set<string>();
 
 function render(): void {
-  renderView({ md, linesEl, countEl, timeline }, { bpm: BPM, mode });
+  renderView({ md, linesEl, countEl, timeline }, { bpm: BPM, mode, fitRuler: true });
 }
 
 // Advances the rail when the current text/mode satisfies the next step it's

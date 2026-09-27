@@ -71,6 +71,11 @@ textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
 .timeline-scroll { overflow-x: auto; }
 .timeline { --bars: 16; position: relative; min-width: max(100%, calc(var(--bars) * 44px)); padding-bottom: var(--space); }
+/* Guided page only: the ruler always fits the pane's width, so a retimed
+   line never needs a scroll to come into view (view.ts scales the range in
+   instead). */
+.timeline.fit { min-width: 100%; }
+.track { display: block; }
 
 .ruler {
   position: relative; height: 72px; border-bottom: var(--hairline);

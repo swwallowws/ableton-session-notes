@@ -28,7 +28,21 @@ export interface RenderOpts {
   bpm: number;
   mode: Mode;
   beatsPerBar?: number;
+  // When true, the ruler always spans bar 1 through at least two bars past
+  // the last placed line (minimum 18 bars), scaled to fit the container
+  // width with no horizontal scroll, and eases into a new range over ~600ms
+  // when that range changes (skipped under prefers-reduced-motion). Used by
+  // the guided try page, which narrows to one verse and needs the retimed
+  // line to stay on screen. Default false keeps the full playground's
+  // original content-sized, scrollable ruler.
+  fitRuler?: boolean;
 }
+
+const MIN_FIT_BARS = 18;
+const RANGE_EASE_MS = 600;
+
+const prefersReducedMotion = (): boolean =>
+  typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // 1-indexed bar.beat, the way Live's ruler reads.
 export const barBeat = (beat: number, beatsPerBar = BEATS_PER_BAR): string => {
@@ -86,6 +100,7 @@ export function render(els: ViewEls, opts: RenderOpts): void {
     locators.map((l, i) => ({ ...l, time: placed[i] ?? l.time })),
     clips,
     beatsPerBar,
+    opts.fitRuler ?? false,
   );
 }
 
@@ -95,17 +110,37 @@ export function drawTimeline(
   locators: Locator[],
   clips: ClipPlan[],
   beatsPerBar = BEATS_PER_BAR,
+  fitRuler = false,
 ): void {
-  const lastBeat = Math.max(
-    16,
-    ...locators.map((l) => l.time + 4),
-    ...clips.map((c) => c.startTime + c.duration),
-  );
-  const bars = Math.ceil(lastBeat / beatsPerBar) + 1;
+  let bars: number;
+  if (fitRuler) {
+    // Bar 1 through at least two bars past the last placed line, never
+    // narrower than MIN_FIT_BARS, so a retimed line can't land off screen.
+    const lastPlacedBeat = Math.max(
+      0,
+      ...locators.map((l) => l.time),
+      ...clips.map((c) => c.startTime + c.duration),
+    );
+    const lastPlacedBar = Math.floor(lastPlacedBeat / beatsPerBar) + 1;
+    bars = Math.max(MIN_FIT_BARS, lastPlacedBar + 2);
+  } else {
+    const lastBeat = Math.max(
+      16,
+      ...locators.map((l) => l.time + 4),
+      ...clips.map((c) => c.startTime + c.duration),
+    );
+    bars = Math.ceil(lastBeat / beatsPerBar) + 1;
+  }
   const pct = (beat: number) => `${(beat / (bars * beatsPerBar)) * 100}%`;
 
-  timeline.replaceChildren();
+  const prevBars = fitRuler ? Number(timeline.dataset["bars"] ?? 0) : 0;
+  timeline.dataset["bars"] = String(bars);
   timeline.style.setProperty("--bars", String(bars));
+
+  timeline.replaceChildren();
+  // Ruler and lane share one wrapper so a range change can ease both of them
+  // together with a single transform (see the FLIP animation below).
+  const track = node("div", "track");
 
   const ruler = node("div", "ruler");
   for (let b = 0; b < bars; b++) {
@@ -113,7 +148,7 @@ export function drawTimeline(
     tick.style.left = pct(b * beatsPerBar);
     ruler.append(tick);
   }
-  timeline.append(ruler);
+  track.append(ruler);
 
   const lane = node("div", "lane");
   lane.append(node("span", "lane-name", "Lyrics"));
@@ -134,5 +169,29 @@ export function drawTimeline(
       lane.append(clip);
     }
   }
-  timeline.append(lane);
+  track.append(lane);
+  timeline.append(track);
+
+  // Every position above is linear in 1/bars, so a uniform horizontal scale
+  // reproduces exactly what the in-between layout would look like: paint the
+  // new (correct) layout, scale it back to look like the old one, then ease
+  // the scale to 1. Left-anchored (bar 1 never moves), skipped when the
+  // range didn't actually change, on first paint, or under reduced motion.
+  if (fitRuler && prevBars > 0 && prevBars !== bars && !prefersReducedMotion()) {
+    track.style.transformOrigin = "left top";
+    track.style.transform = `scaleX(${bars / prevBars})`;
+    track.getBoundingClientRect(); // force layout before easing, so the jump above isn't itself animated
+    track.style.transition = `transform ${RANGE_EASE_MS}ms ease`;
+    requestAnimationFrame(() => {
+      track.style.transform = "scaleX(1)";
+    });
+    track.addEventListener(
+      "transitionend",
+      () => {
+        track.style.transition = "";
+        track.style.transform = "";
+      },
+      { once: true },
+    );
+  }
 }

@@ -4,7 +4,6 @@
 
 .mut { color: var(--ink-mut); }
 .small { font-size: 12px; }
-code { font: 0.9em var(--font-mono); }
 .cap {
   margin: 0; font: 500 11px/1.4 var(--font-mono); letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink-mut);
@@ -31,7 +30,6 @@ textarea {
   font: 13.5px/1.6 var(--font-mono);
 }
 textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
-.hint { margin: 0; padding: var(--space) calc(var(--space) * 1.5); border-top: var(--hairline); font-size: 12px; }
 
 /* ---- mock arrangement: fits the pane's width, never scrolls ---- */
 .seg { display: inline-flex; }

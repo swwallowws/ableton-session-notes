@@ -60,19 +60,19 @@ const fit = () => {
 
 const { rail } = demoShell($("demo"), {
   product: "Session Notes",
-  title: "Tag a lyric line, watch it land.",
-  intro:
-    "Lyrics in a note, placed in Ableton Live's arrangement by a tag at the start of a line. This runs Session Notes' real timing code at 120 BPM, where one bar is two seconds.",
+  title: "Place lyrics in Ableton Live's arrangement.",
+  intro: "A bracket at the start of a line sets where it lands. Tempo is 120 BPM, so a bar lasts two seconds.",
   steps: [
-    { id: "tag", label: "Type [9] in front of the first line", hint: "A plain number is a bar: the line lands on bar 9." },
-    { id: "time", label: "Change it to [0:08]", hint: "A colon makes it a time: 0:08 is eight seconds in, which is bar 5." },
-    { id: "mode", label: "Show it as clips on a Lyrics track" },
+    { id: "tag", label: "Type [9] before the first line", hint: "A plain number means a bar." },
+    { id: "time", label: "Change it to [0:08]", hint: "A colon means minutes and seconds: 0:08 is bar 5." },
+    { id: "mode", label: "Switch to Clips" },
   ],
   full: {
-    label: "extension for Ableton Live 12",
+    label: "Live 12 extension",
     href: "https://github.com/swwallowws/ableton-session-notes/releases",
     where: "on GitHub",
   },
+  endText: "Done. Try any bar or time.",
   onDone: () => {
     after.hidden = false;
   },

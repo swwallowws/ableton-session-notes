@@ -21,6 +21,7 @@ fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 copyStatic();
 fs.cpSync("demo/vendor", `${out}/vendor`, { recursive: true });
+fs.cpSync("demo/favicons", `${out}/favicons`, { recursive: true });
 
 const options: esbuild.BuildOptions = {
   entryPoints: ["demo/demo.ts", "demo/try/try.ts"],

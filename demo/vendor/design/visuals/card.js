@@ -1,7 +1,8 @@
 // Social and summary cards: one layout, four sizes, restyled only here.
 // visuals/card.html?format=og&theme=night&data=<url-encoded JSON>
 // JSON: { name, lines: string[], symbol: "<svg>...</svg>", image?: URL,
-//         category?: "transcribe" | "transform" | "perceive" | "workflow" }
+//         category?: "transcribe" | "transform" | "perceive" | "workflow",
+//         focus?: "top left" | "top" | "center" | "left" }   (which part of the image a crop keeps)
 // When fonts and the image are in, <body data-ready="1"> says the card can be
 // captured. A bad URL shows the error on the card and sets data-ready="error".
 
@@ -14,6 +15,8 @@ export const FORMATS = {
 
 export const THEMES = ['paper', 'night'];
 export const CATEGORIES = ['transcribe', 'transform', 'perceive', 'workflow'];
+// App screenshots start top left, so crops keep that corner unless a card says otherwise.
+export const FOCUS = ['top left', 'top', 'center', 'left'];
 
 export function parseCard(search) {
   const q = new URLSearchParams(search);
@@ -36,11 +39,13 @@ export function parseCard(search) {
   if (data.category !== undefined && !CATEGORIES.includes(data.category)) {
     throw new Error(`unknown category "${data.category}": use ${CATEGORIES.join(', ')}`);
   }
+  const focus = data.focus ?? 'top left';
+  if (!FOCUS.includes(focus)) throw new Error(`unknown focus "${focus}": use ${FOCUS.join(', ')}`);
   const lines = Array.isArray(data.lines) ? data.lines.map(String) : [];
   return {
     format,
     theme,
-    data: { ...data, lines, symbol: typeof data.symbol === 'string' ? data.symbol : '' },
+    data: { ...data, lines, focus, symbol: typeof data.symbol === 'string' ? data.symbol : '' },
   };
 }
 
@@ -137,6 +142,7 @@ async function render() {
   ];
   if (data.image) {
     const img = $('.card-image img');
+    img.style.objectPosition = data.focus;
     img.src = data.image;
     waits.push(img.decode().catch(() => { root.dataset.imageError = '1'; }));
   } else {

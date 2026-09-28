@@ -25,7 +25,8 @@ Key bands in CSS, for rows of height `R` with the top row a B:
 
 ## Notes
 
-- Sharp rectangles, one row high minus a 1px gap, tinted with the roll's category accent instead of ink: `color-mix(in oklab, var(--acc) P%, var(--ground))` where `P = 35 + 65 * velocity` (velocity 0..1), so soft notes are pale tints and loud notes are near full accent.
+- Sharp rectangles, one row high minus a 1px gap, shaded by pitch in the roll's category accent instead of ink: `color-mix(in oklab, var(--acc) P%, var(--ground))` where `P = 40 + 60 * u` and `u` runs 0..1 from the lowest to the highest pitch in view. The line reads as one gradient: low notes are pale tints, high notes near full accent, and neighbouring notes stay close in shade. Canvas code uses `noteColor(acc, ground, pitch, lo, hi)` from `tokens.js`. (This carries on tabridge's first "notes carry colour" idea inside the one-accent system: pitch sets the shade where it once set the hue.)
+- Drum lanes are not pitches: drum notes keep one shade per hit, `P = 35 + 65 * velocity`.
 - Without a category, `--acc` falls back to `--ink`, so the same formula yields grey tints of ink; that is acceptable.
 - The sounding note: `background: var(--acc)` at full strength, plus a 1px `--ink` outline so "now" stays distinct from a loud note. The playhead stays `--acc`.
 - Canvas code resolves the tint with `cssColor()` on an element whose style sets the `color-mix()` (or computes the mix itself from the resolved accent and ground), since canvas cannot read `color-mix()` directly.

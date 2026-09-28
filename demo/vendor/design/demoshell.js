@@ -130,9 +130,21 @@ export const NOMARK_ATTR = 'data-demoshell-nomark';
 export const MARK_ATTR = 'data-demoshell-mark';
 export const MARK_WORD = 'DEMO';
 
-/** The mark's text: the word, count times; CSS spaces it into a tiled grid. */
+/** The mark's text: the word, count times, space separated. */
 export function markText(count) {
   return Array.from({ length: count }, () => MARK_WORD).join(' ');
+}
+
+/** Tiles in each mark: enough to fill a 2560px-wide, 3000px-tall box. */
+export const MARK_TILES = 1800;
+
+/** The mark's tiles: one span per word; CSS centres them on a grid of whole tiles. */
+export function markTiles(count, doc = document) {
+  return Array.from({ length: count }, () => {
+    const s = doc.createElement('span');
+    s.textContent = MARK_WORD;
+    return s;
+  });
 }
 
 // Elements that cannot hold a child layer, or are controls, not surfaces.
@@ -158,7 +170,8 @@ export function wantsMark({ tagName, background, nomark = false, optIn = false }
 }
 
 function markEl() {
-  const mark = el('div', 'demoshell-mark', markText(1200));
+  const mark = el('div', 'demoshell-mark');
+  mark.append(...markTiles(MARK_TILES));
   mark.setAttribute('aria-hidden', 'true');
   return mark;
 }

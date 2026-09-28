@@ -75,8 +75,16 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
    stage container with its own background (editors, rolls, panels), behind
    that container's content, so a screenshot cannot pass for the product.
    It never lies over text: --mark tints the ground away from the text, and
-   check-contrast.mjs holds every text token at 4.5:1 over it. */
-.demoshell { --demoshell-mark-opacity: .8; }
+   check-contrast.mjs holds every text token at 4.5:1 over it.
+   Each word is a tile on a fixed grid of whole tiles, centred in its box:
+   as many columns and rows as fit, equal margins on every side, the middle
+   of the grid on the middle of the box, and no word cut at an edge. Tiles
+   past the last row that fits fall into zero-height rows and do not show. */
+.demoshell {
+  --demoshell-mark-opacity: .8;
+  --demoshell-mark-tile-w: calc(var(--space) * 13);
+  --demoshell-mark-tile-h: calc(var(--space) * 5);
+}
 .demoshell-marked { isolation: isolate; }
 :where(.demoshell-marked) { position: relative; }
 .demoshell-mark {
@@ -84,17 +92,24 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
   inset: 0;
   z-index: -1;
   overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--demoshell-mark-tile-w));
+  grid-template-rows: repeat(auto-fill, var(--demoshell-mark-tile-h));
+  grid-auto-rows: 0;
+  place-content: center;
   padding: calc(var(--space) * 2);
   color: var(--mark);
   opacity: var(--demoshell-mark-opacity);
-  font: 600 11px/calc(var(--space) * 5) var(--font-mono);
+  font: 600 11px/var(--demoshell-mark-tile-h) var(--font-mono);
   letter-spacing: .3em;
-  word-spacing: 5em;
-  overflow-wrap: normal;
+  text-align: center;
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
 }
+/* The letter spacing also trails the last letter; start the word by as much
+   so the ink, not the box, sits in the middle of the tile. */
+.demoshell-mark > span { overflow: hidden; min-width: 0; padding-inline-start: .3em; }
 /* Opted out: no mark of its own, and a ground that covers the stage's mark
    unless the element sets its own background. */
 :where(.demoshell-stage [data-demoshell-nomark]) { background-color: var(--ground); }

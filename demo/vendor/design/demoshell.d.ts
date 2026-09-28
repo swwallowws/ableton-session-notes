@@ -34,6 +34,10 @@ export declare const NOMARK_ATTR: 'data-demoshell-nomark';
 export declare const MARK_ATTR: 'data-demoshell-mark';
 export declare const MARK_WORD: 'DEMO';
 export declare function markText(count: number): string;
+/** Tiles in each mark layer. */
+export declare const MARK_TILES: number;
+/** One span per word, for the mark's centred grid of whole tiles. */
+export declare function markTiles(count: number, doc?: Document): HTMLSpanElement[];
 export declare function wantsMark(el: { tagName: string; background: string; nomark?: boolean; optIn?: boolean }): boolean;
 
 /** Space runs toggle(); the rail's key legend shows "Space: <label>". */

@@ -28,9 +28,9 @@ export declare const ASIDE_ATTR: 'data-demoshell-aside';
 
 export declare function splitContent<T>(nodes: Iterable<T>): { stage: T[]; aside: T[] };
 
-/** No mark on or behind this element. */
+/** No mark on this element: it rises above the stage's mark, on a ground unless it has its own. */
 export declare const NOMARK_ATTR: 'data-demoshell-nomark';
-/** A mark of its own for an element deeper in the stage (a nested editor). */
+/** A mark of its own for an element inside an opted-out one; elsewhere the stage's mark already covers it. */
 export declare const MARK_ATTR: 'data-demoshell-mark';
 export declare const MARK_WORD: 'DEMO';
 export declare function markText(count: number): string;
@@ -38,6 +38,9 @@ export declare function markText(count: number): string;
 export declare const MARK_TILES: number;
 /** One span per word, for the mark's centred grid of whole tiles. */
 export declare function markTiles(count: number, doc?: Document): HTMLSpanElement[];
+/** Whether an element gets a mark layer of its own: it asks, and sits inside an opted-out element. */
+export declare function ownsMark(el: { tagName: string; optIn?: boolean; nomark?: boolean; insideNomark?: boolean }): boolean;
+/** @deprecated Since 1.7.0 the mark lies over the whole stage; the shell no longer uses this. */
 export declare function wantsMark(el: { tagName: string; background: string; nomark?: boolean; optIn?: boolean }): boolean;
 
 /** Space runs toggle(); the rail's key legend shows "Space: <label>". */
@@ -82,9 +85,10 @@ export interface DemoShellOptions {
  * the aside: under the rail in the rail column, after the rail on phones,
  * and hidden while empty. In embed mode a ResizeObserver posts
  * { type: 'demo-height', height } to window.parent on every size change.
- * A faint "DEMO" mark lies behind the stage and behind the content of each
- * stage child with its own background (opt out: data-demoshell-nomark; opt
- * in deeper: data-demoshell-mark; none at all: data-demoshell-nomark on root).
+ * A faint, still "DEMO" mark lies over the whole stage, above its content,
+ * and never takes the pointer (opt out: data-demoshell-nomark, which raises
+ * the element above it; a mark again inside that: data-demoshell-mark; none
+ * at all: data-demoshell-nomark on root).
  * primary and keys bind Space and single keys on the document, skipping
  * fields, and buttons for Space.
  */

@@ -5,7 +5,7 @@
 // phones. With ?embed=1 the page is
 // transparent, the header goes, the note stays as one small line under the
 // stage, and the page reports its height to the frame around it. In both
-// views a faint, still "DEMO" mark lies behind the stage, and Space (plus any
+// views a faint, still "DEMO" mark lies over the stage, and Space (plus any
 // single keys the demo names) runs the demo's main action, with a key legend
 // under the rail.
 
@@ -122,11 +122,14 @@ export function keyLegend(bindings) {
   return out;
 }
 
-// ---- the demo mark: a faint, still "DEMO" behind the demo ----
+// ---- the demo mark: a faint, still "DEMO" over the demo ----
 
-/** No mark on or behind this element (it gets a ground unless it has its own). */
+/** No mark on this element: it rises above the stage's mark, on a ground unless it has its own. */
 export const NOMARK_ATTR = 'data-demoshell-nomark';
-/** A mark of its own for an element deeper in the stage (a nested editor). */
+/**
+ * A mark of its own for an element inside an opted-out one. Anywhere else the
+ * stage's mark already lies over it, so the attribute changes nothing there.
+ */
 export const MARK_ATTR = 'data-demoshell-mark';
 export const MARK_WORD = 'DEMO';
 
@@ -150,6 +153,16 @@ export function markTiles(count, doc = document) {
 // Elements that cannot hold a child layer, or are controls, not surfaces.
 const NO_LAYER = new Set(['CANVAS', 'IMG', 'VIDEO', 'AUDIO', 'IFRAME', 'OBJECT', 'EMBED', 'TEXTAREA', 'INPUT', 'SELECT', 'BUTTON', 'SVG', 'PICTURE']);
 
+/**
+ * Whether an element in the stage gets a mark layer of its own, over its
+ * content. The stage's mark lies over everything else, so only an element
+ * that asks (data-demoshell-mark) inside an opted-out one needs its own.
+ */
+export function ownsMark({ tagName, optIn = false, nomark = false, insideNomark = false }) {
+  if (NO_LAYER.has(String(tagName).toUpperCase())) return false;
+  return optIn && !nomark && insideNomark;
+}
+
 function transparent(color) {
   const c = String(color || '').trim();
   if (!c || c === 'transparent') return true;
@@ -160,9 +173,9 @@ function transparent(color) {
 }
 
 /**
- * Whether an element in the stage gets a mark of its own, behind its content:
- * a surface with its own background (an editor, a roll, a panel), or one
- * that asks with data-demoshell-mark. Transparent ones show the stage's mark.
+ * @deprecated Since 1.7.0 the mark lies over the whole stage, so no surface
+ * needs one behind its content; the shell no longer calls this. Kept for
+ * pages that import it: a surface with its own background, or one that asks.
  */
 export function wantsMark({ tagName, background, nomark = false, optIn = false }) {
   if (nomark || NO_LAYER.has(String(tagName).toUpperCase())) return false;
@@ -176,19 +189,19 @@ function markEl() {
   return mark;
 }
 
+// The mark goes last in its box, so it paints over the content before it.
 function markSurfaces(stage) {
-  const surfaces = new Set([...stage.children, ...stage.querySelectorAll(`[${MARK_ATTR}]`)]);
-  for (const s of surfaces) {
-    if (s.classList.contains('demoshell-mark')) continue;
-    const want = wantsMark({
+  for (const s of stage.querySelectorAll(`[${MARK_ATTR}]`)) {
+    const off = s.parentElement?.closest(`[${NOMARK_ATTR}]`);
+    const want = ownsMark({
       tagName: s.tagName,
-      background: getComputedStyle(s).backgroundColor,
+      optIn: true,
       nomark: s.hasAttribute(NOMARK_ATTR),
-      optIn: s.hasAttribute(MARK_ATTR),
+      insideNomark: !!off && stage.contains(off),
     });
     if (!want) continue;
     s.classList.add('demoshell-marked');
-    s.prepend(markEl());
+    s.append(markEl());
   }
 }
 
@@ -254,13 +267,13 @@ export function demoShell(root, {
   if (embed) root.replaceChildren(body, note);
   else { head.append(note); root.replaceChildren(head, body); }
 
-  // The mark, in both views: behind the stage's empty areas, and behind the
-  // content of each stage surface with its own background, so a screenshot
-  // cannot pass for the product. Faint, still, and out of the way of the
-  // pointer and of assistive tech. Measured once the page's styles apply.
+  // The mark, in both views: one layer over the whole stage, above its
+  // content, so nothing in the demo covers it and a screenshot cannot pass
+  // for the product. Faint, still, and out of the way of the pointer, of
+  // selection and of assistive tech.
   if (!root.hasAttribute(NOMARK_ATTR)) {
     markSurfaces(stage);
-    stage.prepend(markEl());
+    stage.append(markEl());
   }
 
   const railOpts = { steps, onDone, onReset };

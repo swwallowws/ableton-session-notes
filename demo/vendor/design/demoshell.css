@@ -70,27 +70,31 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
 /* Touch-only screens have no keys to press. */
 @media (hover: none) and (pointer: coarse) { .demoshell-keys { display: none; } }
 
-/* ---- the demo mark: a faint, still "DEMO" tiled behind the demo ----
-   One layer behind the whole stage (its empty areas), and one inside each
-   stage container with its own background (editors, rolls, panels), behind
-   that container's content, so a screenshot cannot pass for the product.
-   It never lies over text: --mark tints the ground away from the text, and
-   check-contrast.mjs holds every text token at 4.5:1 over it.
+/* ---- the demo mark: a faint, still "DEMO" tiled over the demo ----
+   One layer over the whole stage, above its content (rolls, canvases,
+   editors, panels), so nothing in the demo can cover it and a screenshot
+   cannot pass for the product. It never takes the pointer, a selection or
+   assistive tech. --mark is the ink at a low alpha, so it reads on --ground,
+   --ground-2 and on top of notes in both modes; where a stroke crosses text,
+   check-contrast.mjs holds every text token at 3.5:1 and the mark itself
+   at 1.15:1 against the plain ground.
    Each word is a tile on a fixed grid of whole tiles, centred in its box:
    as many columns and rows as fit, equal margins on every side, the middle
    of the grid on the middle of the box, and no word cut at an edge. Tiles
    past the last row that fits fall into zero-height rows and do not show. */
 .demoshell {
-  --demoshell-mark-opacity: .8;
+  --demoshell-mark-opacity: .09;
   --demoshell-mark-tile-w: calc(var(--space) * 13);
   --demoshell-mark-tile-h: calc(var(--space) * 5);
+  /* Above anything a demo stacks inside its stage (the stage is isolated). */
+  --demoshell-mark-z: 2147483646;
 }
 .demoshell-marked { isolation: isolate; }
 :where(.demoshell-marked) { position: relative; }
 .demoshell-mark {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: var(--demoshell-mark-z);
   overflow: hidden;
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--demoshell-mark-tile-w));
@@ -110,9 +114,14 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
 /* The letter spacing also trails the last letter; start the word by as much
    so the ink, not the box, sits in the middle of the tile. */
 .demoshell-mark > span { overflow: hidden; min-width: 0; padding-inline-start: .3em; }
-/* Opted out: no mark of its own, and a ground that covers the stage's mark
-   unless the element sets its own background. */
-:where(.demoshell-stage [data-demoshell-nomark]) { background-color: var(--ground); }
+/* Opted out: the element rises above the stage's mark, on a ground unless it
+   sets its own background. A data-demoshell-mark element inside it gets a
+   mark of its own again. */
+:where(.demoshell-stage [data-demoshell-nomark]) {
+  position: relative;
+  z-index: calc(var(--demoshell-mark-z) + 1);
+  background-color: var(--ground);
+}
 
 @media (max-width: 720px) {
   .demoshell { padding: calc(var(--space) * 3) 16px calc(var(--space) * 6); }

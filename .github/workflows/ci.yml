@@ -1,0 +1,21 @@
+name: CI
+
+# The tests use no Ableton SDK, so they run with tsx alone: the SDK and CLI packages are
+# local files that are not in the repository, and installing the package would need them.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          npx --yes tsx@4 test/notes.test.ts
+          npx --yes tsx@4 test/timeline.test.ts
+          npx --yes tsx@4 test/demo-try.test.ts

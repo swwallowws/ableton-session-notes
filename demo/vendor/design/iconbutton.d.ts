@@ -2,7 +2,8 @@
 
 export type IconName =
   | 'play' | 'pause' | 'stop' | 'record' | 'reset' | 'download'
-  | 'search' | 'close' | 'plus' | 'minus' | 'chevron' | 'loop';
+  | 'search' | 'close' | 'plus' | 'minus' | 'chevron' | 'loop'
+  | 'system' | 'paper' | 'night';
 
 export declare const ICONS: Readonly<Record<IconName, string>>;
 export declare const ICON_NAMES: readonly IconName[];

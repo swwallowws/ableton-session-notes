@@ -43,10 +43,11 @@ export declare function ownsMark(el: { tagName: string; optIn?: boolean; nomark?
 /** @deprecated Since 1.7.0 the mark lies over the whole stage; the shell no longer uses this. */
 export declare function wantsMark(el: { tagName: string; background: string; nomark?: boolean; optIn?: boolean }): boolean;
 
-/** Space runs toggle(); the rail's key legend shows "Space: <label>". */
+/** Space runs toggle(); with a label, the rail's key legend shows "Space: <label>".
+    Without one Space still works and no legend shows (every demo leaves it out). */
 export interface DemoPrimary {
   toggle(): void;
-  label: string;
+  label?: string;
 }
 
 /** A single key ("r") and what it runs; with a label it shows in the legend. */
@@ -67,7 +68,8 @@ export interface DemoShellOptions {
   title: string;
   intro?: string;
   steps: StepRailStep[];
-  full: DemoFullLink | { coming: true };
+  /** Optional: every demo leaves it out and ends its tour with its own Full version link. */
+  full?: DemoFullLink | { coming: true };
   onDone?: () => void;
   onReset?: () => void;
   endText?: string;

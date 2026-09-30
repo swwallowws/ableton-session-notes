@@ -41,6 +41,12 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
 .demoshell-note a { color: var(--ink); text-decoration-color: var(--acc); text-underline-offset: 3px; }
 .demoshell-note a:focus-visible { outline: 1px solid var(--acc); outline-offset: 2px; }
 
+/* The title over the steps: the one place a demo points to the full product. */
+.demoshell-go { margin: 0; font: 600 15px/1.35 var(--font-sans); color: var(--ink); text-wrap: balance; }
+.demoshell-go a { color: var(--acc); text-decoration: underline; text-underline-offset: 3px; }
+.demoshell-go a:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.demoshell-rail .steprail-head { padding-bottom: calc(var(--space) * 2); border-bottom: var(--hairline); }
+
 /* ---- body: rail column and stage column, one shared top line ---- */
 .demoshell-body {
   display: grid;
@@ -49,9 +55,13 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
   row-gap: calc(var(--space) * 3);
   align-items: start;
 }
-/* The rail's first line box starts half a leading above its text; pull it up
-   by that much so the text, not the box, meets the stage's top edge. */
-.demoshell-rail { position: sticky; top: calc(var(--space) * 2); margin-top: -.25em; }
+/* The rail sits in its own box, so the steps read as the tour, apart from the
+   product on the stage. */
+.demoshell-rail {
+  position: sticky; top: calc(var(--space) * 2);
+  padding: calc(var(--space) * 2.5);
+  background: var(--ground); border: var(--hairline); border-radius: var(--radius);
+}
 .demoshell-stage { min-width: 0; position: relative; isolation: isolate; }
 /* Optional controls under the rail (data-demoshell-aside); none, no space. */
 .demoshell-aside { margin-top: calc(var(--space) * 4); }

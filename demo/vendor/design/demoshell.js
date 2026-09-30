@@ -25,6 +25,16 @@ export function demoNote(full) {
   };
 }
 
+/**
+ * The title over the steps: "Try it out!", and where the full product has a
+ * home, " Or open the full version →" linked after it. (A page that frames the
+ * demo may carry its own button to the full product instead.)
+ */
+export function railTitle(full) {
+  if (!full || full.coming) return { text: 'Try it out!', link: null };
+  return { text: 'Try it out! Or ', link: { text: 'open the full version →', href: full.href } };
+}
+
 /** True when the search string asks for the framed view (?embed=1). */
 export function isEmbed(search) {
   return new URLSearchParams(search).get('embed') === '1';
@@ -212,20 +222,19 @@ function el(tag, className, text) {
   return e;
 }
 
-function noteEl(full, embed) {
-  const { text, link } = demoNote(full);
-  const p = el('p', 'demoshell-note');
-  if (!link) {
-    p.textContent = text;
-    return p;
+function titleEl(full, embed) {
+  const { text, link } = railTitle(full);
+  const p = el('p', 'demoshell-go', text);
+  if (link) {
+    const a = el('a', null, link.text);
+    a.href = link.href;
+    // Inside a frame, a link must not replace the demo with the whole site.
+    if (embed) { a.target = '_blank'; a.rel = 'noopener'; }
+    p.append(a);
   }
-  const a = el('a', null, link.text);
-  a.href = link.href;
-  // Inside a frame, a link must not replace the demo with the whole site.
-  if (embed) { a.target = '_blank'; a.rel = 'noopener'; }
-  p.append(text.slice(0, text.length - link.text.length - 1), a, '.');
   return p;
 }
+
 
 export function demoShell(root, {
   product, title, intro, steps, full, onDone, onReset, endText, primary, keys,
@@ -263,9 +272,9 @@ export function demoShell(root, {
   stage.append(...parts.stage);
   body.append(railCol, stage);
 
-  const note = noteEl(full, embed);
-  if (embed) root.replaceChildren(body, note);
-  else { head.append(note); root.replaceChildren(head, body); }
+  // The way to the full product lives in one place: the title over the steps.
+  if (embed) root.replaceChildren(body);
+  else root.replaceChildren(head, body);
 
   // The mark, in both views: one layer over the whole stage, above its
   // content, so nothing in the demo covers it and a screenshot cannot pass
@@ -279,6 +288,7 @@ export function demoShell(root, {
   const railOpts = { steps, onDone, onReset };
   if (endText != null) railOpts.endText = endText;
   const rail = stepRail(railEl, railOpts);
+  railEl.querySelector('.steprail-head')?.prepend(titleEl(full, embed));
 
   if (bindings.size) {
     document.addEventListener('keydown', (e) => {

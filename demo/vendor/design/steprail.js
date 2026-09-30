@@ -22,6 +22,10 @@ export function stepRail(el, { steps, onDone, onReset, endText = 'That’s it. E
   const state = createRail(steps.map((s) => s.id));
   el.classList.add('steprail');
   el.innerHTML = '';
+  // A head row: a page may put a title in it (the demo shell does); Start over
+  // sits at its end as an icon, its word kept as name and tooltip.
+  const head = document.createElement('div');
+  head.className = 'steprail-head';
   const list = document.createElement('ol');
   const items = steps.map((s) => {
     const li = document.createElement('li');
@@ -40,8 +44,10 @@ export function stepRail(el, { steps, onDone, onReset, endText = 'That’s it. E
   again.type = 'button';
   again.className = 'steprail-reset';
   again.innerHTML = iconSvg('reset');
-  again.append('Start over');
-  el.append(list, end, again);
+  again.setAttribute('aria-label', 'Start over');
+  again.title = 'Start over';
+  head.append(again);
+  el.append(head, list, end);
 
   function paint() {
     items.forEach((li) => {

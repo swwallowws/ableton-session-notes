@@ -18,6 +18,10 @@ export const ICONS = {
   minus: '<path d="M3 8h10"/>',
   chevron: '<path d="M4 6l4 4 4-4"/>',
   loop: '<path d="M2.5 7.5V6.5a2 2 0 0 1 2-2h8M10.5 2.5l2 2-2 2M13.5 8.5v1a2 2 0 0 1-2 2h-8M5.5 13.5l-2-2 2-2"/>',
+  // Colour modes: follow the system (half dark), Paper (a sun), Night (a moon).
+  system: '<circle cx="8" cy="8" r="5"/><path d="M8 3a5 5 0 0 0 0 10z" fill="currentColor"/>',
+  paper: '<circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/>',
+  night: '<path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z"/>',
 };
 
 export const ICON_NAMES = Object.keys(ICONS);
@@ -25,7 +29,7 @@ export const ICON_NAMES = Object.keys(ICONS);
 const LABELS = {
   play: 'Play', pause: 'Pause', stop: 'Stop', record: 'Record', reset: 'Start over',
   download: 'Download', search: 'Search', close: 'Close', plus: 'Add', minus: 'Remove',
-  chevron: 'More', loop: 'Loop',
+  chevron: 'More', loop: 'Loop', system: 'System', paper: 'Paper', night: 'Night',
 };
 
 // What a toggle shows while pressed, when the icon has a natural pair.

@@ -35,6 +35,16 @@
   /* Without a category the accent is ink. */
   --acc: var(--ink);
 
+  /* One colour per drum part, wherever drums are drawn (YSAD's circle, dials
+     and pads). A fixed categorical set, validated with the dataviz palette
+     checks for every pair in both modes: lightness band, chroma, colourblind
+     separation, normal-vision separation, 3:1 against the ground. The kick is
+     the transform accent. */
+  --drum-kick:  light-dark(#c23900, #fa4e00);
+  --drum-snare: light-dark(#2a78d6, #0066c8);
+  --drum-hats:  light-dark(#008a5f, #199e70);
+  --drum-perc:  light-dark(#4a3aa7, #c366e7);
+
   --font-sans: "Archivo", -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --head-stretch: 125%;
@@ -71,6 +81,10 @@
     --ink: #111111;
     --ink-mut: #6b6a64;
     --mark: #111111;
+    --drum-kick: #c23900;
+    --drum-snare: #2a78d6;
+    --drum-hats: #008a5f;
+    --drum-perc: #4a3aa7;
   }
   [data-category="transcribe"] { --acc: #007489; }
   [data-category="transform"]  { --acc: #c23900; }

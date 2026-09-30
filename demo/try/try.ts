@@ -67,12 +67,9 @@ const { rail } = demoShell($("demo"), {
     { id: "time", label: "Change it to [0:08]", hint: "A colon means minutes and seconds: 0:08 is bar 5." },
     { id: "mode", label: "Switch to Clips" },
   ],
-  full: {
-    label: "Live 12 extension",
-    href: "https://github.com/swwallowws/ableton-session-notes/releases",
-    where: "on GitHub",
-  },
-  endText: "Done. Try any bar or time.",
+  // The rail's title stays a plain "Try it out!"; the way to the full version (the
+  // extension's releases) comes at the end of the tour, as in every demo.
+  endText: "That was the first step. ",
   onDone: () => {
     after.hidden = false;
   },
@@ -86,6 +83,16 @@ const { rail } = demoShell($("demo"), {
     after.hidden = true;
   },
 });
+
+// After the tour: the full version (the extension's releases), in a new tab so the demo
+// stays where it is.
+{
+  const full = Object.assign(document.createElement("a"), {
+    className: "full-link", href: "https://github.com/swwallowws/ableton-session-notes/releases",
+    target: "_blank", rel: "noopener", textContent: "Full version ↗",
+  });
+  document.querySelector(".steprail-end")?.append(full);
+}
 
 // The playground link sits under the rail, shown once the steps are done.
 document.querySelector(".demoshell-rail")?.append(after);

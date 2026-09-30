@@ -1,0 +1,9 @@
+/* The colour mode switch (themeswitch.js): three small icon buttons joined
+   into one row. The chosen mode takes the accent. Link after iconbutton.css. */
+
+.themeswitch { display: inline-flex; }
+.themeswitch .iconbutton { border-radius: 0; }
+.themeswitch .iconbutton:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.themeswitch .iconbutton:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+.themeswitch .iconbutton + .iconbutton { margin-left: -1px; }
+.themeswitch .iconbutton[aria-pressed="true"] { position: relative; z-index: 1; }

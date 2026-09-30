@@ -310,11 +310,11 @@
     </div>
     <div class="hint" id="hint" hidden>
       <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
-      <span>Save your Set to attach notes.</span>
+      <span>Save your set to attach notes.</span>
     </div>
     <div class="hint" id="scopeHint" hidden>
       <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
-      <span>This is a Global note. It is not tied to this Set. It looks the same in every project.</span>
+      <span>This is a global note. It isn't tied to this set: it looks the same in every set.</span>
     </div>
     <div class="pathbar" id="pathbar" hidden>
       <span class="p" id="pathtext"></span>
@@ -327,7 +327,7 @@
         <span class="tools">
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
           <button id="reveal" class="icon ghost tip-left" data-tip="Show file location" aria-label="Show file location"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5 L6 4.5 L7.2 5.9 L14.5 5.9 L14.5 12.5 L1.5 12.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
-          <button id="cornerTimeline" class="icon ghost tip-left" data-tip="Send lyrics to timeline" aria-label="Send lyrics to arrangement timeline"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 H15" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.4 V10.6 M8 5.4 V10.6 M12 5.4 V10.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+          <button id="cornerTimeline" class="icon ghost tip-left" data-tip="Send lyrics to the arrangement" aria-label="Send lyrics to the arrangement"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8 H15" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4 5.4 V10.6 M8 5.4 V10.6 M12 5.4 V10.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
           <span class="tools-meta">
             <button id="settingsBtn" class="icon ghost tip-left" data-tip="Settings" aria-label="Settings"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5 H14 M2 8 H14 M2 11.5 H14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11" cy="4.5" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/><circle cx="5" cy="8" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/><circle cx="9" cy="11.5" r="1.9" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/></svg></button>
             <button id="helpBtn" class="icon ghost tip-left" data-tip="Help & lyric timing" aria-label="Help and lyric timing">?</button>
@@ -388,8 +388,8 @@
         </table>
 
         <div class="help-sec">
-          <strong>Lyrics on the timeline</strong>
-          <p class="help-how">Tag a lyric line with a position, then send it to the timeline as <b>locators</b> or <b>clips</b>.</p>
+          <strong>Lyrics on the arrangement</strong>
+          <p class="help-how">Tag a lyric line with a position, then send it to the arrangement as <b>locators</b> or <b>clips</b>.</p>
           <ul class="help-list">
             <li>A tagged line starts a block; plain lines under it flow one bar apart.</li>
             <li>A blank line ends the block, so notes and to-dos are left alone.</li>
@@ -400,7 +400,7 @@
             <tbody>
               <tr><td class="raw"><code>[17]</code></td><td class="md">bar 17</td></tr>
               <tr><td class="raw"><code>[17.3]</code></td><td class="md">bar 17, beat 3</td></tr>
-              <tr><td class="raw"><code>[1:04]</code></td><td class="md">1:04 (uses the Set tempo)</td></tr>
+              <tr><td class="raw"><code>[1:04]</code></td><td class="md">1:04 (uses the set's tempo)</td></tr>
               <tr><td class="raw"><code>[=8*4]</code></td><td class="md">beat 32 (math: <code>+ - * / ( )</code>)</td></tr>
               <tr><td class="raw"><code>[=bpm]</code></td><td class="md">1 min in, any tempo</td></tr>
             </tbody>
@@ -472,8 +472,8 @@
         };
         // Ableton names project folders "<Set> Project"; drop the redundant suffix.
         const projLabel = (STATE.projectName || "").replace(/ Project$/, "");
-        if (hasProject) addGroup("Project · " + projLabel, namesIn("p").map((n) => "p:" + n));
-        addGroup("Global Notes", namesIn("g").map((n) => "g:" + n));
+        if (hasProject) addGroup("Set · " + projLabel, namesIn("p").map((n) => "p:" + n));
+        addGroup("Global notes", namesIn("g").map((n) => "g:" + n));
         // A disabled option draws a separator line between the notes and the
         // actions. Actions use all-emoji icons (same cell width) so they align.
         // A disabled option draws a separator line between the notes and the
@@ -825,7 +825,7 @@
       if (STATE && STATE.migration) {
         const n = STATE.migration.count;
         document.getElementById("mtext").textContent =
-          "New project - bring your " + n + (n === 1 ? " note" : " notes") +
+          "New set: bring your " + n + (n === 1 ? " note" : " notes") +
           " from " + STATE.migration.fromName + " over?";
         migrate.hidden = false;
       }
@@ -848,7 +848,7 @@
         tlLines = extractLyricLinesJS(pad.value);
         const n = tlLines.length;
         tltext.textContent = n
-          ? "Send " + n + (n === 1 ? " line" : " lines") + " to the timeline:"
+          ? "Send " + n + (n === 1 ? " line" : " lines") + " to the arrangement:"
           : "No tagged lyrics yet. Tag a line like [1].";
         // With nothing to send, offer only Cancel - no Locators/Clips.
         tlLoc.hidden = !n;

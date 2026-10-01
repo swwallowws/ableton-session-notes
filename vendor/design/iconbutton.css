@@ -1,0 +1,36 @@
+/* Icon buttons (iconbutton.js): a square button with a symbol drawn in
+   currentColor. Sizes m (32px, the default) and s (24px). Pressed toggles
+   take the accent. Link after tokens.css. Nothing moves. */
+
+.iconbutton {
+  --iconbutton-size: calc(var(--space) * 4);
+  --iconbutton-glyph: 16px;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--iconbutton-size);
+  height: var(--iconbutton-size);
+  margin: 0;
+  padding: 0;
+  border: var(--hairline);
+  border-radius: var(--radius);
+  background: var(--ground-2);
+  color: var(--ink);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.iconbutton[data-size="s"] { --iconbutton-size: calc(var(--space) * 3); --iconbutton-glyph: 14px; }
+.iconbutton .ds-icon { display: block; width: var(--iconbutton-glyph); height: var(--iconbutton-glyph); pointer-events: none; }
+/* The stroke stays 1.5px at every size. */
+.ds-icon * { vector-effect: non-scaling-stroke; }
+
+.iconbutton:hover { background: var(--band); }
+.iconbutton[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+.iconbutton[aria-pressed="true"]:hover { background: var(--ground-2); }
+.iconbutton:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.iconbutton:disabled { cursor: default; opacity: .45; }
+.iconbutton:disabled:hover { background: var(--ground-2); }
+
+/* A bare icon anywhere else (a link, a line of text) sits on the text line. */
+.ds-icon { flex: none; vertical-align: -.2em; }

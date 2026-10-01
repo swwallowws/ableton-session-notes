@@ -1,0 +1,36 @@
+/* Range (range.js): a 2px track filled in the accent up to a small square
+   thumb, the label and live value above it, a tick under each stop. */
+.range { display: grid; gap: 6px; min-width: 0; }
+.range-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space); }
+.range-head label { color: var(--ink-mut); font: 13px/1 var(--font-mono); }
+.range-head output { color: var(--acc); font: 600 13px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.range input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 2px;
+  margin: 6px 0 0;
+  border-radius: var(--radius);
+  background: linear-gradient(to right, var(--acc) 0%, var(--acc) var(--fill, 0%), var(--line) var(--fill, 0%), var(--line) 100%);
+  cursor: pointer;
+}
+.range input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius);
+  background: var(--acc);
+}
+.range input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius);
+  background: var(--acc);
+  border: none;
+}
+.range input[type="range"]::-moz-range-track { height: 2px; background: transparent; }
+.range input[type="range"]:focus-visible { outline: 1px solid var(--acc); outline-offset: 4px; }
+/* One tick per stop, centred under where the thumb lands (the thumb is 12px). */
+.range-ticks { display: flex; justify-content: space-between; padding: 0 5px; }
+.range-ticks span { width: 1px; height: 4px; background: var(--line); }

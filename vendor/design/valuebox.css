@@ -1,0 +1,44 @@
+/* Value box (valuebox.js): only the number, in the accent, in a box. On hover
+   an arrow appears in the half the pointer is over and the cursor points the
+   same way. Link after tokens.css; sizes follow the element's font-size. */
+
+.valuebox {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 5ch;
+  height: 1.75em;
+  padding: 0 0.7em;
+  border: var(--hairline);
+  background: var(--ground);
+  /* Sized to sit in a toolbar next to 12-13 px controls without shouting;
+     set font-size on the element to scale the whole box. */
+  font: 600 17px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--acc);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.valuebox:hover,
+.valuebox.held { border-color: var(--acc); }
+.valuebox:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+.valuebox[data-half="up"] { cursor: n-resize; }
+.valuebox[data-half="down"] { cursor: s-resize; }
+
+.valuebox-arrow {
+  position: absolute;
+  right: 3px;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  transition: opacity 0.12s;
+}
+.valuebox[data-half="up"] .valuebox-arrow { top: 5px; border-bottom: 5px solid var(--acc); opacity: 1; }
+.valuebox[data-half="down"] .valuebox-arrow { bottom: 5px; border-top: 5px solid var(--acc); opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .valuebox-arrow { transition: none; }
+}

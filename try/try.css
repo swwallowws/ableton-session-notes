@@ -1,0 +1,90 @@
+/* Session Notes guided walkthrough. The page layout comes from the design
+   system's demo shell (../vendor/design/demoshell.css); this file only styles
+   the live piece: the note, the mock arrangement and its two-row ruler. */
+
+.mut { color: var(--ink-mut); }
+.small { font-size: 12px; }
+.cap {
+  margin: 0; font: 500 11px/1.4 var(--font-mono); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-mut);
+}
+.after { margin: calc(var(--space) * 2) 0 0; }
+.after a { color: var(--ink); text-decoration-color: var(--acc); text-underline-offset: 3px; }
+
+button { color: var(--ink); background: var(--ground-2); border: var(--hairline); border-radius: var(--radius); padding: 3px var(--space); cursor: pointer; font: 500 12px/1.4 var(--font-mono); }
+button:hover { background: var(--band); }
+button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+.live { display: grid; gap: calc(var(--space) * 2); min-width: 0; }
+
+.pane { border: var(--hairline); background: var(--ground-2); display: flex; flex-direction: column; min-width: 0; }
+.pane-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space); flex-wrap: wrap;
+  padding: var(--space) calc(var(--space) * 1.5); border-bottom: var(--hairline);
+}
+
+textarea {
+  display: block; width: 100%; resize: none; overflow: hidden; border: 0; margin: 0;
+  padding: calc(var(--space) * 1.5); background: var(--ground-2); color: var(--ink);
+  font: 13.5px/1.6 var(--font-mono);
+}
+textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+
+/* ---- mock arrangement: fits the pane's width, never scrolls ---- */
+.seg { display: inline-flex; }
+.seg button + button { margin-left: -1px; }
+.seg button[aria-pressed="true"] { position: relative; z-index: 1; }
+
+.timeline { position: relative; overflow: hidden; padding-bottom: var(--space); }
+.track { display: block; }
+
+/* Two rows: bar numbers on top, the clock time at each bar under them. The
+   row the first line's tag counts in is lit, and so is the tick it names. */
+.ruler {
+  position: relative; height: 80px; border-bottom: var(--hairline);
+  background: var(--ground);
+}
+.ruler .bar, .ruler .sec {
+  position: absolute; height: 18px; padding-left: 3px;
+  border-left: var(--hairline); font: 10px/18px var(--font-mono); color: var(--ink-mut);
+  white-space: nowrap;
+}
+.ruler .bar { top: 0; }
+.ruler .sec { top: 18px; }
+.ruler[data-scale]::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: var(--band);
+}
+.ruler[data-scale="seconds"]::before { top: 18px; }
+.ruler[data-scale="bars"] .bar,
+.ruler[data-scale="seconds"] .sec { color: var(--ink); }
+.ruler .bar.on, .ruler .sec.on { color: var(--acc); font-weight: 700; }
+
+.locator { position: absolute; top: 36px; bottom: 0; border-left: 2px solid var(--acc); }
+.locator .flag {
+  position: absolute; top: 0; left: 0; max-width: 160px;
+  padding: 1px 6px; background: var(--acc); color: var(--ground);
+  font: 600 11px/1.5 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Lines sit one bar apart; every other flag drops a row so each has two
+   bars of room before the next flag on its row. */
+.locator:nth-of-type(even) .flag { top: 20px; }
+
+.lane { position: relative; height: 50px; margin-top: var(--space); background: var(--band); }
+.lane-name {
+  position: sticky; left: 0; z-index: 1; display: inline-block;
+  padding: 0 6px; font: 10px/16px var(--font-mono); color: var(--ink-mut); background: var(--ground-2);
+}
+.clip {
+  position: absolute; top: 20px; height: 26px; padding: 0 6px;
+  background: color-mix(in oklab, var(--acc) 70%, var(--ground)); color: var(--ground);
+  border-left: 1px solid var(--ground-2);
+  font: 600 11px/26px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Narrow panes: label every other second (0:00, 0:04, 0:08 ...), which
+   still names both bar 5 (0:08) and bar 9 (0:16). */
+@media (max-width: 720px) {
+  .ruler .bar, .ruler .sec { font-size: 9px; padding-left: 2px; }
+  .ruler .sec.odd, .ruler[data-scale="seconds"] .sec.odd { color: transparent; }
+}

@@ -1,0 +1,46 @@
+/* Step rail (steprail.js): the tour beside a demo. Each step's number sits in
+   a small circle: the current one filled in the accent, done ones ticked, the
+   ones still to come quiet. Start over is an icon at the end of the head row. */
+
+.steprail { font: 15px/1.45 var(--font-sans); color: var(--ink); }
+
+.steprail-head { display: flex; align-items: flex-start; gap: var(--space); margin-bottom: calc(var(--space) * 2); }
+.steprail-head > :first-child:not(.steprail-reset) { flex: 1; }
+.steprail-reset {
+  display: inline-grid; place-items: center; flex: none; margin-left: auto;
+  width: calc(var(--space) * 3); height: calc(var(--space) * 3); padding: 0;
+  background: none; border: var(--hairline); border-radius: var(--radius);
+  color: var(--ink-mut); cursor: pointer;
+}
+.steprail-reset:hover { color: var(--ink); border-color: var(--acc); }
+.steprail-reset .ds-icon { width: 12px; height: 12px; }
+.steprail-reset:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+.steprail ol { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 12px; }
+.steprail-step {
+  counter-increment: step;
+  display: grid; grid-template-columns: 22px 1fr; column-gap: 12px; align-items: baseline;
+  color: var(--ink-mut);
+  transition: color 600ms ease;
+}
+.steprail-step::before {
+  content: counter(step);
+  display: grid; place-items: center; width: 22px; height: 22px; align-self: start;
+  border: var(--hairline); border-radius: 50%;
+  font: 500 11px/1 var(--font-mono); color: var(--ink-mut);
+  transition: background-color 600ms ease, color 600ms ease, border-color 600ms ease;
+}
+.steprail-label { padding-top: 1px; }
+.steprail-step[data-state="current"] { color: var(--ink); }
+.steprail-step[data-state="current"] .steprail-label { font-weight: 600; }
+.steprail-step[data-state="current"]::before { background: var(--acc); border-color: var(--acc); color: var(--ground); }
+.steprail-step[data-state="done"]::before { content: "\2713"; border-color: var(--acc); color: var(--acc); }
+.steprail-hint { grid-column: 2; font-size: .85em; color: var(--ink-mut); }
+.steprail-end { margin: 14px 0 0; }
+/* The tour's last line ends with the way to the full product: "That was the first step. Full version ↗". */
+.steprail-end a { color: var(--acc); text-decoration: underline; text-underline-offset: 3px; }
+.steprail-end a:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .steprail-step, .steprail-step::before { transition: none; }
+}

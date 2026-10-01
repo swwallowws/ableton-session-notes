@@ -1,0 +1,31 @@
+/* Playhead (playhead.js): the box you click or drag in, and the line itself.
+   Link after tokens.css. seekable() adds .seekable to the box and .seeking while
+   a press or drag lasts; put .playhead on the line (absolutely placed, its left
+   set by the page) to get the accent line with a wider grab area. */
+
+.seekable {
+  cursor: pointer;
+  touch-action: pan-y; /* a sideways drag moves the head, an upward one still scrolls */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.seekable.seeking { cursor: ew-resize; }
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--acc);
+  cursor: ew-resize;
+}
+/* An invisible band either side of the line, so a finger or a mouse can take
+   hold of it without landing on the 1px exactly. */
+.playhead::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  right: -6px;
+}

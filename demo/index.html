@@ -1,71 +1,16 @@
 <!doctype html>
-<html lang="en" data-category="workflow">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Session Notes: web demo</title>
-  <!-- Favicons: generated and copied here by the showcase's `npm run favicons -- --copy`. -->
+  <title>Session Notes: demo</title>
+  <!-- The web page is the guided demo (try/); this root only sends readers there, keeping ?theme and ?embed. -->
+  <meta http-equiv="refresh" content="0; url=try/">
   <link rel="icon" href="favicons/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="icon" href="favicons/favicon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="favicons/apple-touch-icon.png">
-  <link rel="stylesheet" href="vendor/design/tokens.css">
-  <link rel="stylesheet" href="vendor/design/valuebox.css">
-  <link rel="stylesheet" href="demo.css">
-  <script>
-    // Set the mode before first paint: ?theme=paper|night (from the showcase
-    // frame) wins; otherwise the system scheme applies. ?embed=1 drops the
-    // page intro so the demo fills a frame.
-    (function () {
-      var q = new URLSearchParams(location.search);
-      var t = q.get("theme");
-      if (t === "paper" || t === "night") document.documentElement.dataset.theme = t;
-      if (q.get("embed") === "1") document.documentElement.classList.add("embed");
-    })();
-  </script>
+  <script>location.replace("try/" + location.search);</script>
 </head>
 <body>
-  <header class="intro">
-    <p class="eyebrow">Session Notes · lyrics that land on the arrangement</p>
-    <h1 class="head">Tag a line, watch it land.</h1>
-    <p class="mut">This page runs Session Notes' real timing code on whatever you type: tag a line with a bar, a bar and beat, a timecode or a bit of math, and the lines under it follow one bar apart. The other half, notes that live with the set, runs inside Ableton Live 12 as an <a href="https://www.ableton.com/en/live/extensions/">extension</a>.</p>
-  </header>
-
-  <main class="demo">
-    <section class="pane note">
-      <div class="pane-bar">
-        <span class="cap">Note</span>
-        <button type="button" id="reset">Reset example</button>
-      </div>
-      <textarea id="md" spellcheck="false" aria-label="Note text (Markdown)"></textarea>
-      <p class="hint mut">Tags: <code>[17]</code> bar · <code>[17.3]</code> bar and beat · <code>[1:04]</code> timecode · <code>[=8*4]</code> math, in beats. A blank line ends a block.</p>
-    </section>
-
-    <section class="pane lyrics">
-      <div class="pane-bar"><span class="cap">Lyric lines found</span><span id="count" class="mut small"></span></div>
-      <ol id="lines" class="lines"></ol>
-    </section>
-
-    <section class="pane arrangement">
-      <div class="pane-bar">
-        <span class="cap">Ableton Live arrangement</span>
-        <span class="controls">
-          <span role="group" aria-label="Send as" class="seg">
-            <button type="button" data-mode="locators" aria-pressed="true">Locators</button>
-            <button type="button" data-mode="clips" aria-pressed="false">Clips</button>
-          </span>
-          <span class="tempo">
-            <span id="tempo-label" class="cap">Tempo</span>
-            <span id="bpm"></span>
-            <span class="unit">BPM</span>
-          </span>
-        </span>
-      </div>
-      <div class="timeline-scroll">
-        <div id="timeline" class="timeline" role="img" aria-label="Mock Ableton arrangement showing where each lyric line lands"></div>
-      </div>
-    </section>
-  </main>
-
-  <script src="demo.js"></script>
+  <p><a href="try/">Session Notes: the demo</a></p>
 </body>
 </html>

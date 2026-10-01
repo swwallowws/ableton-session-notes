@@ -1,5 +1,5 @@
-// Guided walkthrough for Session Notes' lyric timing: the same render as the
-// full playground (../demo.ts), narrowed to one short verse, laid out by the
+// Guided walkthrough for Session Notes' lyric timing: the shared render
+// (../view.ts) on one short verse, laid out by the
 // design system's demo shell and walked through by its step rail. Tempo is
 // fixed at 120 BPM, so one bar is two seconds; the ruler shows both.
 
@@ -22,7 +22,6 @@ const md = $<HTMLTextAreaElement>("md");
 const linesEl = $<HTMLOListElement>("lines");
 const countEl = $("count");
 const timeline = $("timeline");
-const after = $("after");
 const modeButtons = [...document.querySelectorAll<HTMLButtonElement>("[data-mode]")];
 
 let mode: Mode = "locators";
@@ -70,9 +69,6 @@ const { rail } = demoShell($("demo"), {
   // The rail's title stays a plain "Try it out!"; the way to the full version (the
   // extension's releases) comes at the end of the tour, as in every demo.
   endText: "That was the first step. ",
-  onDone: () => {
-    after.hidden = false;
-  },
   onReset: () => {
     doneSteps.clear();
     mode = "locators";
@@ -80,7 +76,6 @@ const { rail } = demoShell($("demo"), {
     md.value = VERSE;
     fit();
     render();
-    after.hidden = true;
   },
 });
 
@@ -93,9 +88,6 @@ const { rail } = demoShell($("demo"), {
   });
   document.querySelector(".steprail-end")?.append(full);
 }
-
-// The playground link sits under the rail, shown once the steps are done.
-document.querySelector(".demoshell-rail")?.append(after);
 
 md.value = VERSE;
 md.addEventListener("input", () => {

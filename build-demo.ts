@@ -9,7 +9,8 @@ import * as path from "node:path";
 const out = "demo-dist";
 const serve = process.argv.includes("--serve");
 
-const STATIC = ["index.html", "demo.css", "try/index.html", "try/try.css"];
+// index.html only sends readers on to the guided demo in try/.
+const STATIC = ["index.html", "try/index.html", "try/try.css"];
 const copyStatic = () => {
   for (const f of STATIC) {
     fs.mkdirSync(path.join(out, path.dirname(f)), { recursive: true });
@@ -24,7 +25,7 @@ fs.cpSync("demo/vendor", `${out}/vendor`, { recursive: true });
 fs.cpSync("demo/favicons", `${out}/favicons`, { recursive: true });
 
 const options: esbuild.BuildOptions = {
-  entryPoints: ["demo/demo.ts", "demo/try/try.ts"],
+  entryPoints: ["demo/try/try.ts"],
   outdir: out,
   outbase: "demo",
   bundle: true,

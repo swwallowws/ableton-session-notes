@@ -1,7 +1,6 @@
 // Shared rendering for the Session Notes web demo: turns note text into the
-// lyric-line list and the mock Ableton Live arrangement. Both the full
-// playground (demo.ts) and the guided walkthrough (try/try.ts) call this, so
-// the two pages can't drift apart.
+// lyric-line list and the mock Ableton Live arrangement, for the guided demo
+// (try/try.ts).
 
 import {
   buildClips,
@@ -33,8 +32,8 @@ export interface RenderOpts {
   // counts in plus the tick it lands on, and the ruler never shows fewer than
   // minBars bars, so a retimed line visibly moves against a steady ruler.
   // Used by the guided try page to show what changes between a bar tag and a
-  // clock tag. Left out (the default), the ruler is the full playground's
-  // single bar row, sized to its content.
+  // clock tag. Left out (the default), the ruler is a single bar row, sized
+  // to its content.
   scales?: { mark: ScaleMark | null; minBars?: number };
 }
 

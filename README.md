@@ -1,5 +1,7 @@
 # Session Notes
 
+simply sketch.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/session-notes-cover.png">
   <source media="(prefers-color-scheme: light)" srcset="assets/session-notes-cover-light.png">

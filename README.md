@@ -5,7 +5,7 @@ simply sketch.
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/session-notes-cover.png">
   <source media="(prefers-color-scheme: light)" srcset="assets/session-notes-cover-light.png">
-  <img alt="Session Notes - Markdown notes that live next to your .als" src="assets/session-notes-cover.png" width="720">
+  <img alt="Session Notes: notes that live with the set, lyrics that land on the arrangement. A tagged verse lands at bar 9 as clips." src="assets/session-notes-cover.png" width="720">
 </picture>
 
 **Notes that live with the set. Lyrics that land on the arrangement.**

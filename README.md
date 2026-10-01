@@ -10,7 +10,7 @@ simply sketch.
 
 **Notes that live with the set. Lyrics that land on the arrangement.**
 
-A minimal Markdown notepad for **Ableton Live 12**, built on the [Live Extensions SDK](https://ableton.com). Jot lyrics, ideas, and to-dos without leaving Live, with clean, native-feeling typography and a render-by-default Markdown view. Tag a lyric line with a bar or timecode and drop it straight onto the arrangement.
+A minimal Markdown notepad for **Ableton Live 12**, built on the [Ableton Live Extensions SDK](https://ableton.com). Jot lyrics, ideas, and to-dos without leaving Ableton Live, with clean, native-feeling typography and a render-by-default Markdown view. Tag a lyric line with a bar or timecode and drop it straight onto the arrangement.
 
 > Requires Ableton Live 12 with the Extensions feature (SDK `1.0.0-beta.0`).
 
@@ -71,7 +71,7 @@ The `#` heading, the prose line, and the to-dos are left out; only the tagged bl
 ## Install
 
 1. Download the latest `Session-Notes-<version>.ablx` from the [Releases](../../releases) page.
-2. In Live: **Settings → Extensions**, then drag the `.ablx` file onto the page.
+2. In Ableton Live: **Settings → Extensions**, then drag the `.ablx` file onto the page.
 3. Right-click a track, clip slot, or scene → **Extensions → Session Notes: Open…**
 
 ## Usage notes
@@ -88,7 +88,7 @@ Copy `.env.example` to `.env` and point `EXTENSION_HOST_PATH` at your local Able
 
 ```bash
 npm install
-npm start        # build + run in Live's Extension Host (Developer Mode must be ON)
+npm start        # build + run in Ableton Live's Extension Host (Developer Mode must be ON)
 npm run build    # dev bundle
 npm run package  # production bundle → Session-Notes-<version>.ablx
 ```

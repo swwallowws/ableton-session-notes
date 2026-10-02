@@ -1,11 +1,23 @@
 name: CI
 
-# The tests use no Ableton SDK, so they run with tsx alone: the SDK and CLI packages are
-# local files that are not in the repository, and installing the package would need them.
+# Tests, the README's links, then the demo site: built from this commit and
+# published to GitHub Pages on every push to main, so the live demo never drifts
+# from the code. Neither the tests nor the demo use the Ableton SDK: the SDK and CLI
+# packages are local files that are not in the repository, so CI leaves them out.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -19,3 +31,57 @@ jobs:
           npx --yes tsx@4 test/notes.test.ts
           npx --yes tsx@4 test/timeline.test.ts
           npx --yes tsx@4 test/demo-try.test.ts
+
+  readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every link in the README answers
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --exclude-loopback --max-retries 3 --accept 200,206,429 README.md
+
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the build tools (without the local SDK packages)
+        run: |
+          npm pkg delete dependencies devDependencies.@ableton-extensions/cli
+          npm install --no-package-lock
+      - name: Build the demo
+        run: npm run demo:build
+      - name: Stamp the build (the showcase compares it with its pictures)
+        run: |
+          touch demo-dist/.nojekyll
+          bash scripts/stamp-site.sh demo-dist
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: demo-dist
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [test, readme, site]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+      - name: The live demo answers
+        env:
+          BASE: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for path in "" try/ try/try.js version.json; do
+            ok=""
+            for attempt in 1 2 3 4 5 6; do
+              if curl -fsS -o /dev/null "${BASE}${path}"; then ok=1; break; fi
+              sleep 10
+            done
+            [ -n "$ok" ] || { echo "not live: ${BASE}${path}"; exit 1; }
+            echo "live: ${BASE}${path}"
+          done

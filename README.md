@@ -70,7 +70,7 @@ The `#` heading, the prose line, and the to-dos are left out; only the tagged bl
 
 ## Install
 
-1. Download the latest `Session-Notes-<version>.ablx` from the [Releases](../../releases) page.
+1. Download the latest `Session-Notes-<version>.ablx` from the [Releases](https://github.com/swwallowws/ableton-session-notes/releases/latest) page.
 2. In Ableton Live: **Settings → Extensions**, then drag the `.ablx` file onto the page.
 3. Right-click a track, clip slot, or scene → **Extensions → Session Notes: Open…**
 

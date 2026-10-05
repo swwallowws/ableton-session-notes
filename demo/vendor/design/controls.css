@@ -1,0 +1,162 @@
+/* Controls (controls.css): the buttons, choices, chips, fields, selects, drop
+   zones and section labels every studio and demo shares, so a product and its
+   demo look like one thing. Link after tokens.css. Controls keep their own
+   case, in the sans; numbers in fields take the mono; labels over sections take
+   the label case. One primary button per screen. */
+
+/* Buttons: hairline on the raised ground. Primary is the accent fill; ghost is
+   a quiet text-like button for "change file" and such. */
+.ds-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 5px 12px;
+  border: var(--hairline);
+  border-radius: var(--radius);
+  background: var(--ground-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ds-button:hover:not(:disabled) { border-color: var(--ink); }
+.ds-button.primary { background: var(--acc); border-color: var(--acc); color: var(--ground); font-weight: 700; }
+.ds-button.primary:hover:not(:disabled) { border-color: var(--ink); }
+.ds-button.ghost { background: transparent; border-color: transparent; color: var(--ink-mut); }
+.ds-button.ghost:hover:not(:disabled) { border-color: transparent; color: var(--ink); }
+.ds-button.small { padding: 2px 8px; font-size: 12px; line-height: 18px; }
+
+/* A choice: one of a few, joined. Mark the chosen one with .on, aria-pressed,
+   or a checked radio inside a label. */
+.ds-choice { display: inline-flex; flex-wrap: wrap; vertical-align: middle; }
+.ds-choice > button, .ds-choice > label {
+  box-sizing: border-box;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 -1px 0 0;
+  padding: 5px 12px;
+  border: var(--hairline);
+  border-radius: 0;
+  background: var(--ground-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.ds-choice > label > input { position: absolute; opacity: 0; pointer-events: none; }
+.ds-choice > button:hover:not(:disabled), .ds-choice > label:hover { z-index: 1; border-color: var(--ink); }
+.ds-choice > .on, .ds-choice > [aria-pressed="true"], .ds-choice > label:has(input:checked) {
+  z-index: 2;
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--ground);
+}
+.ds-choice > label:has(input:focus-visible) { z-index: 3; outline: 2px solid var(--acc); outline-offset: 1px; }
+.ds-choice.small > button, .ds-choice.small > label { padding: 2px 8px; font-size: 12px; line-height: 18px; }
+
+/* A chip: an option that is on or off, among others. A label around a
+   checkbox and a span; the square fills in the accent when it is on. */
+.ds-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ds-chip { position: relative; display: inline-flex; }
+.ds-chip > input { position: absolute; opacity: 0; pointer-events: none; }
+.ds-chip > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border: var(--hairline);
+  background: var(--ground-2);
+  color: var(--ink-mut);
+  font-size: 13px;
+  line-height: 18px;
+  cursor: pointer;
+}
+.ds-chip > span::before { content: ""; flex: none; width: 7px; height: 7px; border: 1px solid var(--ink-mut); }
+.ds-chip > span:hover { border-color: var(--ink); }
+.ds-chip > input:checked + span { border-color: var(--ink); color: var(--ink); }
+.ds-chip > input:checked + span::before { border-color: var(--acc); background: var(--acc); }
+.ds-chip > input:focus-visible + span { outline: 2px solid var(--acc); outline-offset: 1px; }
+.ds-chip > input:disabled + span { cursor: default; opacity: .45; }
+
+/* Fields and selects: the raised ground, a hairline, the accent ring on focus. */
+.ds-field, .ds-select {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px 8px;
+  border: var(--hairline);
+  border-radius: var(--radius);
+  background-color: var(--ground-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+}
+.ds-field::placeholder { color: var(--ink-mut); opacity: 1; }
+.ds-field[type="number"], .ds-field.num { font-family: var(--font-mono); font-size: 13px; }
+.ds-field[type="file"] { padding: 0; border: 0; background: none; color: var(--ink-mut); font-size: 13px; }
+.ds-field[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 5px 12px;
+  border: var(--hairline);
+  border-radius: var(--radius);
+  background: var(--ground-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.ds-field[type="file"]::file-selector-button:hover { border-color: var(--ink); }
+.ds-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 28px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-mut) 50%), linear-gradient(135deg, var(--ink-mut) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+.ds-select:hover:not(:disabled) { border-color: var(--ink); }
+.ds-field:focus-visible, .ds-select:focus-visible { outline: 2px solid var(--acc); outline-offset: -1px; }
+
+/* A drop zone: a dashed box to drop a file on, or click. Add .over while a
+   file hovers it. */
+.ds-drop {
+  box-sizing: border-box;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 28px 20px;
+  border: 1px dashed var(--line);
+  background: var(--ground-2);
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+}
+.ds-drop:hover, .ds-drop.over { border-color: var(--acc); }
+.ds-drop-main { font-weight: 700; }
+.ds-drop-sub { color: var(--ink-mut); font: 12px/1.4 var(--font-mono); }
+.ds-drop:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+
+/* A label over a section of controls. */
+.ds-label {
+  margin: 0;
+  color: var(--ink-mut);
+  font: 600 12px/1.3 var(--font-mono);
+  text-transform: var(--button-case);
+  letter-spacing: .04em;
+}
+
+.ds-button:focus-visible, .ds-choice > button:focus-visible { z-index: 3; outline: 2px solid var(--acc); outline-offset: 1px; }
+.ds-button:disabled, .ds-choice > button:disabled, .ds-field:disabled, .ds-select:disabled { cursor: default; opacity: .45; }
+.ds-choice > label:has(input:disabled) { cursor: default; opacity: .45; }
+/* each control sets its own display, which would beat the hidden attribute */
+.ds-button[hidden], .ds-choice[hidden], .ds-chips[hidden], .ds-chip[hidden], .ds-field[hidden], .ds-select[hidden], .ds-drop[hidden] { display: none; }
+.ds-choice > label:has(input:disabled):hover { border-color: var(--line); }

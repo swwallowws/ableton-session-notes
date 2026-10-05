@@ -33,6 +33,7 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
   font-stretch: var(--head-stretch);
   font-weight: var(--head-weight);
   letter-spacing: var(--head-tracking);
+  text-transform: var(--head-case);
   line-height: .95;
   text-wrap: balance;
 }

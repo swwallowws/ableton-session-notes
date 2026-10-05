@@ -4,16 +4,16 @@ import assert from "node:assert/strict";
 import { VERSE, activeTag, stepFor } from "../demo/try/steps.js";
 import { secondsLabel } from "../demo/view.js";
 
-// The verse is short: every line two to four words, so a flag or clip at one
+// The verse is short: every line two to five words, so a flag or clip at one
 // bar per line can still show it.
 const verseLines = VERSE.trim().split("\n");
 assert.ok(verseLines.length >= 3 && verseLines.length <= 4, "three or four lines");
 for (const l of verseLines) {
   const words = l.trim().split(/\s+/).length;
-  assert.ok(words >= 2 && words <= 4, `"${l}" has two to four words`);
+  assert.ok(words >= 2 && words <= 5, `"${l}" has two to five words`);
 }
 
-const V = "Low tide at noon\nGulls count the boats";
+const V = "low sun, high tide\nswallow whole the off-key hums";
 assert.equal(stepFor(V, "locators", new Set()), null);
 assert.equal(stepFor("[9] " + V, "locators", new Set()), "tag");
 assert.equal(stepFor("[9]" + V, "locators", new Set()), "tag");

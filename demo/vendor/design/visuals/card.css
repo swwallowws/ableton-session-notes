@@ -96,6 +96,7 @@ body { font-family: var(--font-sans); font-variant-numeric: tabular-nums; -webki
   font-weight: var(--head-weight);
   font-stretch: var(--head-stretch);
   letter-spacing: var(--head-tracking);
+  text-transform: var(--head-case);
   line-height: 1.02;
   max-width: 16ch;
 }

@@ -9,10 +9,9 @@ export type Scale = "bars" | "seconds";
 
 // The verse the walkthrough is built around. Untagged (step one is adding
 // the first tag) and short, so each line fits in a one-bar flag or clip.
-export const VERSE = `Low tide at noon
-Gulls count the boats
-I hum it back
-The pier keeps time
+export const VERSE = `low sun, high tide
+swallow whole the off-key hums
+then slowly fade from sight
 `;
 
 const BEATS_PER_BAR = 4;

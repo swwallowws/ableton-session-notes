@@ -14,6 +14,12 @@ A minimal Markdown notepad for **Ableton Live 12**, built on the [Ableton Live E
 
 > Requires Ableton Live 12 with the Extensions feature (SDK `1.0.0-beta.0`).
 
+## In pictures
+
+<img src="media/playground-paper.png" alt="Session Notes: lyric lines placed as clips on the timeline" width="720">
+
+Files to share: [still, Paper](media/playground-paper.png) · [still, Night](media/playground-night.png)
+
 ## Features
 
 - **Markdown, rendered by default.** Write in Markdown; a single tap or `⌘E` toggles between **View** and **Edit**. Headings, bullet/numbered lists, bold/italic, blockquotes, links, and clickable GFM task lists (`- [ ]` / `- [x]`).
@@ -59,14 +65,12 @@ Key: A minor · 128 BPM · ref: that Bonobo track
 
 Verse: keep it breathy, close-mic.
 
-[1] Headlights bleed into the rain
-chasing signals down the lane
-[5] every mile a different me
-[9] static on the radio
-[1:04] and I let the whole thing go
+[1] low sun, high tide
+swallow whole the off-key hums
+[1:04] then slowly fade from sight
 ```
 
-The `#` heading, the prose line, and the to-dos are left out; only the tagged block is sent to the arrangement. The untagged `chasing signals down the lane` flows one bar after `[1]`.
+The `#` heading, the prose line, and the to-dos are left out; only the tagged block is sent to the arrangement. The untagged `swallow whole the off-key hums` flows one bar after `[1]`.
 
 ## Install
 

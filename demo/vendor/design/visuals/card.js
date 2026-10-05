@@ -136,9 +136,9 @@ async function render() {
   }));
 
   const waits = [
-    document.fonts.load(`800 20px Archivo`),
-    document.fonts.load(`400 20px Archivo`),
-    document.fonts.load(`500 20px "JetBrains Mono"`),
+    document.fonts.load(`900 20px "Inter Tight"`),
+    document.fonts.load(`400 20px "Inter Tight"`),
+    document.fonts.load(`500 20px "Geist Mono"`),
   ];
   if (data.image) {
     const img = $('.card-image img');

@@ -48,13 +48,15 @@
 
   --font-sans: "Inter Tight", -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  /* Heads: heavy capitals, set tight. Inter Tight has no width axis, so the
+  /* Heads: heavy and tight, in their own case (a voice line is written
+     lowercase, a name as it is spelled). Inter Tight has no width axis, so the
      stretch stays at 100% (kept as a token for anything that still reads it). */
   --head-stretch: 100%;
   --head-weight: 900;
   --head-tracking: -0.02em;
-  --head-case: uppercase;
-  /* Buttons: the mono in capitals, a hair of tracking so the caps don't crowd. */
+  --head-case: none;
+  /* Buttons and interface labels: the mono in capitals, a hair of tracking so
+     the caps don't crowd. */
   --button-case: uppercase;
   --button-tracking: 0.01em;
 

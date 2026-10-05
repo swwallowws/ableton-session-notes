@@ -21,9 +21,11 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
   margin-bottom: calc(var(--space) * 4);
   border-bottom: var(--hairline);
 }
+/* An interface label, so in the labels' capitals: "STARLING · DEMO". */
 .demoshell-eyebrow {
   margin: 0 0 calc(var(--space) * 1.5);
   font: 500 12px/1.4 var(--font-mono);
+  text-transform: var(--button-case); letter-spacing: .04em;
   color: var(--ink-mut);
 }
 .demoshell-title {

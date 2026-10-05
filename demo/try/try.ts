@@ -59,12 +59,12 @@ const fit = () => {
 
 const { rail } = demoShell($("demo"), {
   product: "Session Notes",
-  title: "Place lyrics in Ableton Live's arrangement.",
+  title: "place lyrics in Ableton Live's arrangement.",
   intro: "A bracket at the start of a line sets where it lands. Tempo is 120 BPM, so a bar lasts two seconds.",
   steps: [
-    { id: "tag", label: "Type [9] before the first line", hint: "A plain number means a bar." },
-    { id: "time", label: "Change it to [0:08]", hint: "A colon means minutes and seconds: 0:08 is bar 5." },
-    { id: "mode", label: "Switch to Clips" },
+    { id: "tag", label: "type [9] before the first line", hint: "A plain number means a bar." },
+    { id: "time", label: "change it to [0:08]", hint: "A colon means minutes and seconds: 0:08 is bar 5." },
+    { id: "mode", label: "switch to Clips" },
   ],
   // The rail's title stays a plain "Try it out!"; the way to the full version (the
   // extension's releases) comes at the end of the tour, as in every demo.

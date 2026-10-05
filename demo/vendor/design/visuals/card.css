@@ -96,7 +96,7 @@ body { font-family: var(--font-sans); font-variant-numeric: tabular-nums; -webki
   font-weight: var(--head-weight);
   font-stretch: var(--head-stretch);
   letter-spacing: var(--head-tracking);
-  text-transform: var(--head-case);
+  /* As written, not in the heads' capitals: a card's first line is a sentence. */
   line-height: 1.02;
   max-width: 16ch;
 }

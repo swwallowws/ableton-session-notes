@@ -145,6 +145,34 @@
 .ds-drop-sub { color: var(--ink-mut); font: 12px/1.4 var(--font-mono); }
 .ds-drop:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
+/* The header every product shares: the raised bar, one height, the wordmark at its
+   start (the name, heavy, with the accent full stop in .dot). .end goes to the right. */
+.ds-header {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-height: 56px;
+  padding: 0 24px;
+  border-bottom: var(--hairline);
+  background: var(--ground-2);
+}
+.ds-header > .end { margin-left: auto; }
+.ds-wordmark {
+  margin: 0;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: var(--head-weight);
+  font-stretch: var(--head-stretch);
+  letter-spacing: var(--head-tracking);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ds-wordmark .dot { color: var(--acc); }
+@media (max-width: 600px) { .ds-header { padding: 8px 16px; } }
+
 /* A label over a section of controls. */
 .ds-label {
   margin: 0;

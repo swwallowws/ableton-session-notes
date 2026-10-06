@@ -7,6 +7,9 @@
 import { iconButton } from './iconbutton.js';
 
 export const MODES = ['', 'paper', 'night'];
+/** Where every product saves the mode. They share one origin (swwallowws.github.io), so a
+ * choice made in one holds in all of them. */
+export const THEME_KEY = 'swwallowws:mode';
 const ICON = { '': 'system', paper: 'paper', night: 'night' };
 
 const store = {
@@ -24,12 +27,19 @@ export function initialMode(search, saved) {
   return '';
 }
 
+/** For a page without the switch (a demo): the mode from ?theme=, else the saved one. */
+export function applySavedMode(root = document.documentElement, storageKey = THEME_KEY) {
+  const mode = initialMode(location.search, store.get(storageKey));
+  if (mode) root.dataset.theme = mode;
+  return mode;
+}
+
 /**
  * Fills `el` with the switch. `storageKey` names where the choice is saved
- * (one per site). `onChange(mode)` runs after every change, including the
+ * (THEME_KEY, shared by every product, unless told otherwise). `onChange(mode)` runs after every change, including the
  * first, with '' for System. Returns { mode, set(mode) }.
  */
-export function themeSwitch(el, { storageKey, onChange, root = document.documentElement } = {}) {
+export function themeSwitch(el, { storageKey = THEME_KEY, onChange, root = document.documentElement } = {}) {
   el.classList.add('themeswitch');
   el.setAttribute('role', 'group');
   el.setAttribute('aria-label', 'Colour mode');

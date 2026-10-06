@@ -13,7 +13,6 @@
 
 button { color: var(--ink); background: var(--ground-2); border: var(--hairline); border-radius: var(--radius); padding: 3px var(--space); cursor: pointer; font: 500 12px/1.4 var(--font-mono); }
 button:hover { background: var(--band); }
-button[aria-pressed="true"] { border-color: var(--acc); color: var(--acc); }
 :focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
 .live { display: grid; gap: calc(var(--space) * 2); min-width: 0; }
@@ -32,9 +31,7 @@ textarea {
 textarea:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
 
 /* ---- mock arrangement: fits the pane's width, never scrolls ---- */
-.seg { display: inline-flex; }
-.seg button + button { margin-left: -1px; }
-.seg button[aria-pressed="true"] { position: relative; z-index: 1; }
+/* Locators / Clips is the design's joined choice (controls.css), as in every demo. */
 
 .timeline { position: relative; overflow: hidden; padding-bottom: var(--space); }
 .track { display: block; }

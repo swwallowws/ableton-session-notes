@@ -10,6 +10,7 @@
 // under the rail.
 
 import { stepRail } from './steprail.js';
+import { applySavedMode } from './themeswitch.js';
 
 const LEAD = 'A demo with limited features.';
 
@@ -244,6 +245,8 @@ export function demoShell(root, {
   // except elements marked data-demoshell-aside, which go under the rail.
   const parts = splitContent([...root.childNodes]);
 
+  // the mode every product shares: ?theme= from a frame first, else the saved choice
+  applySavedMode();
   root.classList.add('demoshell');
   root.toggleAttribute('data-embed', embed);
   document.documentElement.classList.toggle('demoshell-embed', embed);

@@ -1,10 +1,13 @@
 // Set notes travel inside the Set as clip names. Since Live 12.4.15b7 extensions
 // can't touch the project folder, so the notes are packed into the names of empty
-// clips on a take lane: JSON -> Brotli -> CRC32 -> base16384 text, split into
+// clips on a take lane: JSON -> Brotli -> CRC32 -> base64 text, split into
 // chunks. Pure: no SDK, no file system, so it can be tested headlessly.
 //
-// One clip name: "SN1 <id> <part>/<total> <byteLength> <chunk>". The header is
-// plain ASCII so the id and part count survive even if the body is damaged.
+// One clip name: "Session Notes (do not edit) SN2 <id> <part>/<total> <byteLength> <chunk>".
+// The label is what shows on the clip, and the header is plain ASCII so the id
+// and part count survive even if the body is damaged. The 0.3.0 beta wrote
+// "SN1 <id> ..." with a CJK (base16384) body: those still decode, and the next
+// save rewrites them in the current form.
 import { randomInt } from "node:crypto";
 import * as zlib from "node:zlib";
 
@@ -21,11 +24,14 @@ export type Bundle = {
 
 export type Damaged = { id: string | null; reason: string; names: string[] };
 
-const MAGIC = "SN1 ";
+const MAGIC = "Session Notes (do not edit) SN2 ";
+const LEGACY = "SN1 ";
 // 16,000 characters per name stays inside what the spike verified (16,384).
 const CHUNK = 16000;
-const BASE = 0x4e00; // U+4E00..U+8DFF: 16,384 assigned CJK ideographs
-const HEADER = /^SN1 ([0-9a-z]{8}) (\d+)\/(\d+) (\d+) ([\s\S]*)$/;
+const BASE = 0x4e00; // legacy body: U+4E00..U+8DFF, 16,384 CJK ideographs
+const HEADER = /^Session Notes \(do not edit\) SN2 ([0-9a-z]{8}) (\d+)\/(\d+) (\d+) ([\s\S]*)$/;
+const LEGACY_HEADER = /^SN1 ([0-9a-z]{8}) (\d+)\/(\d+) (\d+) ([\s\S]*)$/;
+const BASE64 = /^[A-Za-z0-9+/]*$/;
 // A Set can come from anyone: a few KB of Brotli can expand to gigabytes. Real
 // notes are far below this.
 const MAX_JSON = 8 * 1024 * 1024;
@@ -42,9 +48,10 @@ export const revCounter = (rev: string): number => {
 
 export const nextRev = (parent: string): string => `${revCounter(parent) + 1}-${randomB36(4)}`;
 
-export const isDataName = (name: string): boolean => typeof name === "string" && name.startsWith(MAGIC);
+export const isDataName = (name: string): boolean =>
+  typeof name === "string" && (name.startsWith(MAGIC) || name.startsWith(LEGACY));
 
-// 14 bits per character, so 7 bytes become 4 characters.
+// 14 bits per character, so 7 bytes become 4 characters. Only read now.
 export function toBase16384(bytes: Uint8Array): string {
   let out = "";
   let acc = 0;
@@ -82,6 +89,14 @@ export function fromBase16384(s: string, byteLength: number): Uint8Array {
   return out;
 }
 
+function fromBase64(s: string, byteLength: number): Uint8Array {
+  // Buffer's decoder skips characters it doesn't know, so check first.
+  if (!BASE64.test(s)) throw new Error("character outside the alphabet");
+  const out = Buffer.from(s, "base64");
+  if (out.length !== byteLength) throw new Error("wrong length");
+  return out;
+}
+
 export function encodeBundle(b: Bundle, chunkChars = CHUNK): string[] {
   const json = Buffer.from(JSON.stringify(b), "utf8");
   const packed = zlib.brotliCompressSync(json, {
@@ -94,7 +109,7 @@ export function encodeBundle(b: Bundle, chunkChars = CHUNK): string[] {
   const stream = Buffer.alloc(4 + packed.length);
   stream.writeUInt32BE(zlib.crc32(packed), 0);
   packed.copy(stream, 4);
-  const body = toBase16384(stream);
+  const body = stream.toString("base64").replace(/=+$/, "");
   const chunks: string[] = [];
   for (let i = 0; i < body.length; i += chunkChars) chunks.push(body.slice(i, i + chunkChars));
   if (!chunks.length) chunks.push("");
@@ -112,26 +127,31 @@ const isBundle = (x: any): x is Bundle =>
   typeof x.notes === "object" &&
   Object.values(x.notes).every((t) => typeof t === "string");
 
+type Group = { id: string; legacy: boolean; total: number; byteLength: number; parts: Map<number, string>; names: string[] };
+
 export function decodeNames(names: string[]): { bundles: Bundle[]; damaged: Damaged[] } {
   const bundles: Bundle[] = [];
   const damaged: Damaged[] = [];
-  const groups = new Map<string, { total: number; byteLength: number; parts: Map<number, string>; names: string[] }>();
+  const groups = new Map<string, Group>();
 
   for (const name of names) {
     if (!isDataName(name)) continue;
-    const m = HEADER.exec(name);
+    const legacy = name.startsWith(LEGACY);
+    const m = (legacy ? LEGACY_HEADER : HEADER).exec(name);
     if (!m) {
       damaged.push({ id: null, reason: "unreadable header", names: [name] });
       continue;
     }
     const [, id, part, total, byteLength, chunk] = m as unknown as [string, string, string, string, string, string];
-    let g = groups.get(id);
-    if (!g) groups.set(id, (g = { total: Number(total), byteLength: Number(byteLength), parts: new Map(), names: [] }));
+    const key = (legacy ? "1:" : "2:") + id;
+    let g = groups.get(key);
+    if (!g) groups.set(key, (g = { id, legacy, total: Number(total), byteLength: Number(byteLength), parts: new Map(), names: [] }));
     g.names.push(name);
     if (!g.parts.has(Number(part))) g.parts.set(Number(part), chunk);
   }
 
-  for (const [id, g] of groups) {
+  for (const g of groups.values()) {
+    const { id } = g;
     try {
       for (let p = 1; p <= g.total; p++)
         if (!g.parts.has(p)) {
@@ -140,7 +160,8 @@ export function decodeNames(names: string[]): { bundles: Bundle[]; damaged: Dama
         }
       let body = "";
       for (let p = 1; p <= g.total; p++) body += g.parts.get(p);
-      const stream = Buffer.from(fromBase16384(body, g.byteLength));
+      if (g.byteLength > MAX_JSON) throw new Error("too long");
+      const stream = Buffer.from(g.legacy ? fromBase16384(body, g.byteLength) : fromBase64(body, g.byteLength));
       if (stream.length < 4) throw new Error("too short");
       const packed = stream.subarray(4);
       if (zlib.crc32(packed) !== stream.readUInt32BE(0)) throw new Error("checksum mismatch");

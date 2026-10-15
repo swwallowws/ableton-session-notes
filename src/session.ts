@@ -14,6 +14,8 @@ export type SessionDeps = {
   now: () => Date;
 };
 
+const POLLS = 50; // x 100 ms
+
 export function openSet(deps: SessionDeps, kept: Record<string, string>): Decision {
   const root = deps.root();
   const { bundles, damaged } = decodeNames(deps.readNames());
@@ -71,12 +73,14 @@ export async function saveSetNotes(
     /* keep going: the Set write matters more */
   }
 
+  // A busy Set can take a moment to apply the names, so the read-back waits up to
+  // 5 s before calling the write failed.
   const landed = () => decodeNames(deps.readNames()).bundles.some((b) => b.id === id && b.rev === rev);
   try {
     await deps.writeNames(encodeBundle(bundle));
-    for (let i = 0; i <= 10; i++) {
+    for (let i = 0; i <= POLLS; i++) {
       if (landed()) return { ok: true, id, rev };
-      if (i < 10) await deps.sleep(100);
+      if (i < POLLS) await deps.sleep(100);
     }
   } catch {
     /* reported below */

@@ -94,7 +94,7 @@ test("a 200 KB bundle splits into several clips and round-trips", () => {
   const b = bundle(notes);
   const names = encodeBundle(b);
   assert.ok(names.length > 1, `expected several clips, got ${names.length}`);
-  for (const n of names) assert.ok(n.length <= 16000 + 64, `name length ${n.length}`);
+  for (const n of names) assert.ok(n.length <= 16000 + 80, `name length ${n.length}`);
   assert.deepEqual(decodeNames(names).bundles, [b]);
 });
 
@@ -105,20 +105,42 @@ test("parts decode in any order", () => {
   assert.deepEqual(decodeNames([...names].reverse()).bundles, [b]);
 });
 
-test("each name carries the plain header", () => {
+test("each name starts with a readable label and the plain header", () => {
   const names = encodeBundle(bundle({ a: "x" }));
-  assert.match(names[0]!, /^SN1 7f3k2q9a 1\/1 \d+ /);
+  assert.match(names[0]!, /^Session Notes \(do not edit\) SN2 7f3k2q9a 1\/1 \d+ [A-Za-z0-9+/]+$/);
+});
+
+test("names are plain ASCII, so the clips show no stray script in the take lane", () => {
+  const b = bundle({ "Whole Again": "low sun 🎵 ü 中\n" + text(30000, 9) });
+  for (const n of encodeBundle(b)) assert.match(n, /^[\x20-\x7e]*$/);
 });
 
 test("a changed body character is reported as damaged, keeping the id", () => {
-  const names = encodeBundle(bundle({ a: "hello there" }));
-  const n = names[0]!;
-  const last = n.at(-1)!;
-  const swapped = String.fromCharCode(last.charCodeAt(0) === 0x4e00 ? 0x4e01 : 0x4e00);
-  const { bundles, damaged } = decodeNames([n.slice(0, -1) + swapped]);
+  const n = encodeBundle(bundle({ a: "hello there, low sun, high tide" }))[0]!;
+  const k = n.length - 6;
+  const swapped = n.slice(0, k) + (n[k] === "A" ? "B" : "A") + n.slice(k + 1);
+  const { bundles, damaged } = decodeNames([swapped]);
   assert.deepEqual(bundles, []);
   assert.equal(damaged.length, 1);
   assert.equal(damaged[0]!.id, "7f3k2q9a");
+});
+
+test("a body character outside base64 is damaged", () => {
+  const n = encodeBundle(bundle({ a: "hello" }))[0]!;
+  const { bundles, damaged } = decodeNames([n.slice(0, -2) + "中" + n.slice(-1)]);
+  assert.deepEqual(bundles, []);
+  assert.equal(damaged.length, 1);
+});
+
+test("a v0.3.0 beta name (SN1, CJK body) still decodes", () => {
+  const b = bundle({ "Whole Again": "low sun, high tide" });
+  const packed = zlib.brotliCompressSync(Buffer.from(JSON.stringify(b)));
+  const stream = Buffer.alloc(4 + packed.length);
+  stream.writeUInt32BE(zlib.crc32(packed), 0);
+  packed.copy(stream, 4);
+  const name = `SN1 7f3k2q9a 1/1 ${stream.length} ${toBase16384(stream)}`;
+  assert.equal(isDataName(name), true);
+  assert.deepEqual(decodeNames([name]).bundles, [b]);
 });
 
 test("a missing part is reported", () => {
@@ -151,7 +173,8 @@ test("a bundle that decompresses past the size limit is damaged, not loaded", ()
   const stream = Buffer.alloc(4 + packed.length);
   stream.writeUInt32BE(zlib.crc32(packed), 0);
   packed.copy(stream, 4);
-  const name = `SN1 7f3k2q9a 1/1 ${stream.length} ${toBase16384(stream)}`;
+  const body = stream.toString("base64").replace(/=+$/, "");
+  const name = `Session Notes (do not edit) SN2 7f3k2q9a 1/1 ${stream.length} ${body}`;
   const { bundles, damaged } = decodeNames([name]);
   assert.equal(bundles.length, 0, "the oversized bundle must not load");
   assert.equal(damaged.length, 1);
@@ -160,6 +183,7 @@ test("a bundle that decompresses past the size limit is damaged, not loaded", ()
 test("names that aren't data are ignored", () => {
   assert.deepEqual(decodeNames(["", "Verse 1", "Session Notes data (unused)"]), { bundles: [], damaged: [] });
   assert.equal(isDataName("SN1 7f3k2q9a 1/1 3 x"), true);
+  assert.equal(isDataName("Session Notes (do not edit) SN2 7f3k2q9a 1/1 3 x"), true);
   assert.equal(isDataName("Verse"), false);
 });
 

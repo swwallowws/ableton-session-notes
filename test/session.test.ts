@@ -27,16 +27,25 @@ let root = "";
 const fresh = () => (root = fs.mkdtempSync(path.join(os.tmpdir(), "sn-session-")));
 let clock = Date.UTC(2026, 9, 15, 10, 0, 0);
 // One Set: its clip names live in `names`. `persist: false` simulates a write the
-// Set never takes; `fail` makes the write throw.
-const setOf = (names: string[] = [], opts: { persist?: boolean; fail?: boolean } = {}) => {
+// Set never takes; `fail` makes the write throw; `landAfter` makes the names show
+// up only after that many sleeps (a slow Set).
+const setOf = (names: string[] = [], opts: { persist?: boolean; fail?: boolean; landAfter?: number } = {}) => {
   let sleeps = 0;
+  let late: string[] | null = null;
   const deps: SessionDeps = {
     root: () => root,
-    readNames: () => [...names],
+    readNames: () => {
+      if (late && sleeps >= (opts.landAfter ?? 0)) {
+        names.splice(0, names.length, ...late);
+        late = null;
+      }
+      return [...names];
+    },
     writeNames: async (next) => {
       if (opts.fail) throw new Error("write refused");
       if (opts.persist === false) return;
-      names.splice(0, names.length, ...next);
+      if (opts.landAfter) late = next;
+      else names.splice(0, names.length, ...next);
     },
     sleep: async () => void sleeps++,
     now: () => new Date((clock += 60000)),
@@ -104,7 +113,15 @@ await test("a write the Set never takes fails after polling the read-back", asyn
   const s = setOf([], { persist: false });
   const r = await saveSetNotes(s.deps, { id: null, base: "", notes: { A: "x" }, failed: new Set() });
   assert.equal(r.ok, false);
-  assert.equal(s.sleeps(), 10);
+  assert.equal(s.sleeps(), 50, "polls for 5 s before giving up");
+});
+
+await test("a slow Set that takes the names after 3 s still counts as written", async () => {
+  fresh();
+  const s = setOf([], { landAfter: 30 });
+  const r = await saveSetNotes(s.deps, { id: null, base: "", notes: { A: "x" }, failed: new Set() });
+  assert.equal(r.ok, true);
+  assert.deepEqual(decodeNames(s.names).bundles[0]!.notes, { A: "x" });
 });
 
 await test("retrying after a failed write keeps the id (not a fork)", async () => {
@@ -148,6 +165,7 @@ await test("damaged data is dumped once and reported", () => {
   const s = setOf(["SN1 broken header"]);
   const d = openSet(s.deps, {});
   assert.equal(d.notice?.kind, "damaged");
+  openSet(s.deps, {}); // the pad reopens (resize, send) on the same Set
   const dumps = fs.readdirSync(path.join(backupsDir(root), "damaged"));
   assert.equal(dumps.length, 1);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(backupsDir(root), "damaged", dumps[0]!), "utf8")), ["SN1 broken header"]);

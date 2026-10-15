@@ -5,7 +5,8 @@
 // older installs, which lived in sibling folders under other author ids.
 //
 // <root>/Set Backups/<id>/<rev>.json   one snapshot per Done, last 20 kept
-// <root>/Set Backups/damaged/*.json    raw names of data clips that didn't decode
+// <root>/Set Backups/damaged/<hash>.json  raw names of data clips that didn't decode
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { type Bundle, newId, nextRev, revCounter } from "./codec.js";
@@ -82,12 +83,18 @@ export function listBackups(root: string): BackupSummary[] {
   return out.sort((a, b) => b.saved.localeCompare(a.saved));
 }
 
+// Named by content, so the same damaged clips seen again (the pad reopens on
+// every resize and send) don't pile up copies.
 export function dumpDamaged(root: string, names: string[]): string {
   const dir = path.join(backupsDir(root), DAMAGED);
   fs.mkdirSync(dir, { recursive: true });
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const file = path.join(dir, `${stamp}-${newId().slice(0, 4)}.json`);
-  fs.writeFileSync(file, JSON.stringify(names), "utf8");
+  const json = JSON.stringify(names);
+  const file = path.join(dir, createHash("sha256").update(json).digest("hex").slice(0, 16) + ".json");
+  try {
+    fs.writeFileSync(file, json, { encoding: "utf8", flag: "wx" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+  }
   return file;
 }
 

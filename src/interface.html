@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-category="workflow" data-theme="night">
+<html lang="en" data-theme="night">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -16,13 +16,13 @@
         --field-hover: var(--line);
         --text: var(--ink);
         --muted: var(--ink-mut);
-        --accent: var(--acc);         /* workflow coral */
+        --accent: var(--acc);         /* no category: the ink */
       }
       /* Engines without light-dark() fall back to Paper; the pad is Night only. */
       @supports not (color: light-dark(#000000, #ffffff)) {
         :root {
           --ground: #15121a; --ground-2: #1c1822; --band: #1a1620; --line: #2f2936;
-          --ink: #ece6ee; --ink-mut: #93899a; --acc: #f0919f;
+          --ink: #ece6ee; --ink-mut: #93899a; --acc: #ece6ee;
         }
       }
       * { box-sizing: border-box; }
@@ -50,10 +50,9 @@
       .md { padding: 16px 24px; font-size: var(--note-font, 13px); line-height: 1.7; cursor: text; }
       #preview { min-height: 100%; }   /* fill the view so the whole empty note is clickable */
       .md:empty::before { content: "Click here to start writing…"; color: var(--muted); }
-      .md h1, .md h2, .md h3 { font-weight: 700; line-height: 1.3; margin: 16px 0 8px; letter-spacing: var(--head-tracking); }
-      .md h1, .md h2 { font-weight: var(--head-weight); }
-      .md h1 { font-size: 20px; }
-      .md h2 { font-size: 16px; }
+      .md h1, .md h2, .md h3 { font-weight: 600; line-height: 1.3; margin: 16px 0 8px; }
+      .md h1 { font-size: 15px; }
+      .md h2 { font-size: 13px; }
       .md h3 { font-size: 13px; color: var(--muted); }
       .md > :first-child { margin-top: 0; }
       .md p { margin: 0 0 8px; }
@@ -102,7 +101,7 @@
         padding: 16px 24px 24px; width: min(456px, 90%); max-height: 84%; overflow: auto;
       }
       .help-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-      .help-top strong { font-size: 16px; font-weight: var(--head-weight); letter-spacing: var(--head-tracking); }
+      .help-top strong { font-size: 13px; font-weight: 600; }
       .help-how { color: var(--muted); margin: 0 0 16px; font-size: 12px; line-height: 1.55; }
       .help-cheat { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
       .help-cheat th {
@@ -256,7 +255,7 @@
       .nb {
         font: inherit; color: var(--text); background: var(--field);
         border: var(--hairline); border-radius: var(--radius); height: 24px;
-        padding: 0 8px; width: 136px; flex: 0 0 auto;
+        padding: 0 8px; width: 152px; flex: 0 0 auto;
       }
       .nb:hover { border-color: var(--ink); }
       /* Note picker: our own list, since a native <select> popup's height is up to
@@ -267,6 +266,9 @@
       .picker > button.nb { display: flex; align-items: center; gap: 4px; text-align: left; }
       .picker .nbname { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .picker .caret { flex: 0 0 auto; color: var(--muted); }
+      /* A global note says so here, instead of a strip over the bar. */
+      .picker .nbtag { flex: 0 0 auto; font: 10px/1 var(--font-mono); color: var(--muted); }
+      .picker .nbtag[hidden] { display: none; }
       .picker.open [data-tip]::after { display: none; }
       .nbmenu {
         position: absolute; left: 0; bottom: calc(100% + 4px); z-index: 15;
@@ -321,9 +323,8 @@
       button.ghost { border-color: transparent; background: transparent; color: var(--muted); }
       button.ghost:hover { color: var(--text); border-color: transparent; }
       button.icon { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; }
-      .tools button.icon.ghost { border-color: var(--line); background: var(--field); color: var(--text); }
-      .tools button.icon.ghost:hover { border-color: var(--ink); background: var(--band); }
-      button.icon.on, .tools button.icon.ghost.on { color: var(--accent); border-color: var(--accent); background: var(--field); }
+      .tools button.icon.ghost:hover { border-color: var(--line); color: var(--text); }
+      button.icon.on, .tools button.icon.ghost.on { color: var(--text); border-color: var(--line); background: var(--field); }
       button.icon svg { display: block; }
       /* instant custom tooltip (native title has a ~1s delay we can't change) */
       [data-tip] { position: relative; }
@@ -372,10 +373,6 @@
       <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
       <span>Set notes are saved inside the set. Save the set to keep them.</span>
     </div>
-    <div class="hint" id="scopeHint" hidden>
-      <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
-      <span>This is a global note. It stays on this computer and looks the same in every set.</span>
-    </div>
     <div class="pathbar" id="pathbar" hidden>
       <span class="p" id="pathtext"></span>
       <button class="pathcopy tip-right" id="copypath" data-tip="Copy path" aria-label="Copy path"></button>
@@ -383,7 +380,7 @@
     <div class="bar">
       <div class="left">
         <span class="picker" id="picker">
-          <button class="nb tip-left" id="notebook" type="button" data-tip="Switch note" aria-label="Switch note" aria-haspopup="listbox" aria-expanded="false"><span class="nbname" id="nbname"></span><svg class="caret" width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 6.5 L5 3.5 L8 6.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="nb tip-left" id="notebook" type="button" data-tip="Switch note" aria-label="Switch note" aria-haspopup="listbox" aria-expanded="false"><span class="nbname" id="nbname"></span><span class="nbtag" id="nbtag" hidden>global</span><svg class="caret" width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 6.5 L5 3.5 L8 6.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <div class="nbmenu" id="nbmenu" role="listbox" hidden></div>
         </span>
         <input class="nb" id="newnb" hidden placeholder="name this note" />
@@ -1070,17 +1067,15 @@
       // ---- first-save hint ----
       // Set notes are written into the Set on Done, and only reach the .als file
       // when the Set is saved. Say so quietly until this Set holds notes. Doesn't
-      // apply to a Global note, so it's scope-gated the same way scopeHint is -
+      // apply to a Global note, so it's scope-gated like the global tag -
       // refreshHint() (defined later) keeps this in sync on every note switch.
       const unsaved = !(STATE && STATE.setHasData);
       document.getElementById("hint").hidden = !(unsaved && !NOTICE && scopeOf(current) === "p");
 
-      // ---- global-note hint ----
-      // A Global note looks the same as a Project note once picked, with nothing
-      // else on screen saying which one it is. Say so plainly, same pattern as
-      // the unsaved-Set hint above. refreshScopeHint() (defined later, not
-      // called yet here) keeps this in sync on every later note switch.
-      document.getElementById("scopeHint").hidden = scopeOf(current) !== "g";
+      // ---- global tag ----
+      // A global note looks like a set note once picked, so the picker says
+      // "global" beside its name. refreshScopeHint() keeps it in sync.
+      document.getElementById("nbtag").hidden = scopeOf(current) !== "g";
 
       // ---- delete confirm ----
       const confirmBar = document.getElementById("confirm");
@@ -1195,7 +1190,7 @@
       const revealBtn = document.getElementById("reveal");
       const pathbar = document.getElementById("pathbar");
       const pathtext = document.getElementById("pathtext");
-      const scopeHint = document.getElementById("scopeHint");
+      const nbTag = document.getElementById("nbtag");
       const unsavedHint = document.getElementById("hint");
       function sanitizeName(n) { return (n.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled"); }
       function currentFilePath() {
@@ -1226,7 +1221,7 @@
       // Global notes aren't tied to any Set, so switching to one is easy to miss
       // against a Project note - say so plainly, the same way the unsaved-Set
       // hint does. Runs every time the selected note changes, not just once.
-      function refreshScopeHint() { scopeHint.hidden = scopeOf(current) !== "g"; }
+      function refreshScopeHint() { nbTag.hidden = scopeOf(current) !== "g"; }
       function refreshHint() { unsavedHint.hidden = !(unsaved && migrate.hidden && scopeOf(current) === "p"); }
       revealBtn.addEventListener("click", () => {
         pathbar.hidden = !pathbar.hidden;

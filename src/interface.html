@@ -1,31 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-category="workflow" data-theme="night">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Session Notes</title>
+    <!-- The shared design system (~/Playground/design), inlined with its fonts
+         by build.ts. Night always: the pad sits inside Live's dark window. -->
+    <style>/*__TOKENS__*/</style>
     <style>
       :root {
-        /* Palette aligned to Live 12's default dark theme (a subtle cool-neutral:
-           main surface ~#2e3137, dark control fields ~#1d1f23). The writing area
-           is a dark field, the bar matches Live's surface, and buttons sit lighter
-           above it. Amber accent and blue text-selection are Live's own. */
-        --bg: #1f2228;          /* writing area - dark control field */
-        --surface: #2e3137;     /* bottom bar - surface tone */
-        --field: #43464e;       /* buttons / notebook selector (raised) */
-        --field-hover: #4c4f57;
-        --text: #b6b7bd;        /* control foreground */
-        --muted: #74767e;       /* disabled text */
-        --line: #16181c;        /* dark frame */
-        --accent: #e4e5e8;      /* accent (default / enabled) - colorless, brighter than text */
-        --select: #c9cace;      /* text selection - neutral */
+        /* The pad's names for the design system's tokens. */
+        --bg: var(--ground);          /* writing area */
+        --surface: var(--band);       /* bottom bar and strips */
+        --field: var(--ground-2);     /* buttons, picker, chips */
+        --field-hover: var(--line);
+        --text: var(--ink);
+        --muted: var(--ink-mut);
+        --accent: var(--acc);         /* workflow coral */
+      }
+      /* Engines without light-dark() fall back to Paper; the pad is Night only. */
+      @supports not (color: light-dark(#000000, #ffffff)) {
+        :root {
+          --ground: #15121a; --ground-2: #1c1822; --band: #1a1620; --line: #2f2936;
+          --ink: #ece6ee; --ink-mut: #93899a; --acc: #f0919f;
+        }
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
       body {
         background: var(--bg);
         color: var(--text);
-        font: 11px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font: 12px/1.4 var(--font-sans); font-variant-numeric: tabular-nums;
         display: flex;
         flex-direction: column;
         -webkit-font-smoothing: antialiased;
@@ -36,16 +41,17 @@
         resize: none; background: transparent; color: var(--text);
         caret-color: var(--accent); border: 0; outline: 0;
         padding: 14px 16px;
-        font: var(--note-font, 13px)/1.7 ui-monospace, "SF Mono", Menlo, monospace;
+        font: var(--note-font, 13px)/1.7 var(--font-mono);
       }
       textarea::placeholder { color: var(--muted); }
-      textarea::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
-      .md ::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
+      textarea::selection { background: color-mix(in oklab, var(--acc) 35%, transparent); color: var(--ink); }
+      .md ::selection { background: color-mix(in oklab, var(--acc) 35%, transparent); color: var(--ink); }
 
       .md { padding: 14px 16px; font-size: var(--note-font, 13px); line-height: 1.7; cursor: text; }
       #preview { min-height: 100%; }   /* fill the view so the whole empty note is clickable */
       .md:empty::before { content: "Click here to start writing…"; color: var(--muted); }
-      .md h1, .md h2, .md h3 { font-weight: 600; line-height: 1.3; margin: 14px 0 6px; }
+      .md h1, .md h2, .md h3 { font-weight: 700; line-height: 1.3; margin: 14px 0 6px; letter-spacing: var(--head-tracking); }
+      .md h1, .md h2 { font-weight: var(--head-weight); }
       .md h1 { font-size: 17px; }
       .md h2 { font-size: 15px; }
       .md h3 { font-size: 13px; color: var(--muted); }
@@ -58,7 +64,7 @@
       .md li.task input {
         appearance: none; -webkit-appearance: none; margin: 0; cursor: pointer;
         flex: 0 0 auto; width: 13px; height: 13px; position: relative; top: 1px;
-        background: var(--field); border: 1px solid var(--muted); border-radius: 2px;
+        background: var(--field); border: 1px solid var(--muted); border-radius: var(--radius);
       }
       .md li.task input:checked { background: var(--accent); border-color: var(--accent); }
       .md li.task input:checked::after {
@@ -68,7 +74,7 @@
       }
       .md li.task.done { color: var(--muted); text-decoration: line-through; }
       .md blockquote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 2px solid var(--field); color: var(--muted); }
-      .md code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #2a2d33; padding: 1px 4px; border-radius: 2px; }
+      .md code { font-family: var(--font-mono); font-size: 12px; background: var(--band); padding: 1px 4px; border-radius: var(--radius); }
       .md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
       .md hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
       /* Lyric lines (recognised by their position tag, in View) - an accent rail
@@ -78,9 +84,9 @@
       .md .lyric.flow { border-left-color: var(--field); }
       .md .lyric-chip {
         flex: 0 0 auto; align-self: flex-start;
-        font: 10px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+        font: 10px/1.6 var(--font-mono);
         color: var(--accent); background: var(--field); border: 1px solid var(--line);
-        border-radius: 3px; padding: 0 5px; min-width: 30px; text-align: center;
+        border-radius: var(--radius); padding: 0 5px; min-width: 30px; text-align: center;
         white-space: nowrap; font-variant-numeric: tabular-nums;
       }
       .md .lyric.flow .lyric-chip { color: var(--muted); background: transparent; border-color: transparent; }
@@ -92,7 +98,7 @@
       }
       .help[hidden] { display: none; }
       .help-card {
-        background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+        background: var(--bg); border: var(--hairline); border-radius: var(--radius);
         padding: 14px 16px; width: min(440px, 90%); max-height: 84%; overflow: auto;
         box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
       }
@@ -106,8 +112,8 @@
       }
       .help-cheat td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: top; width: 50%; }
       .help-cheat td.raw code {
-        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
-        background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
+        font-family: var(--font-mono); font-size: 11px;
+        background: var(--band); padding: 1px 5px; border-radius: var(--radius); color: var(--text);
         display: inline-block; line-height: 1.7;
       }
       /* Pin the cheatsheet's rendered size - the note font (--note-font) must only
@@ -129,8 +135,8 @@
       .help-list li { margin: 4px 0; }
       .help-list b { color: var(--text); }
       .help-how code, .help-cheat td.md code {
-        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
-        background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
+        font-family: var(--font-mono); font-size: 11px;
+        background: var(--band); padding: 1px 5px; border-radius: var(--radius); color: var(--text);
       }
       /* ---- settings panel ---- */
       .set-row { margin-top: 16px; }
@@ -148,19 +154,19 @@
       /* Flat slider matching Live's controls. */
       .range {
         -webkit-appearance: none; appearance: none; display: block; width: 150px; max-width: 100%; height: 4px;
-        background: var(--field); border: 1px solid var(--line); border-radius: 3px; outline: 0; cursor: pointer;
+        background: var(--field); border: var(--hairline); border-radius: var(--radius); outline: 0; cursor: pointer;
       }
       .range::-webkit-slider-thumb {
-        -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%;
+        -webkit-appearance: none; appearance: none; width: 3px; height: 14px; border-radius: var(--radius);
         background: var(--accent); border: 1px solid var(--line); cursor: pointer;
       }
       .set-preview {
-        margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px;
+        margin-top: 12px; padding: 10px 12px; border: var(--hairline); border-radius: var(--radius);
         background: var(--bg); color: var(--text); line-height: 1.6;
-        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--note-font, 13px);
+        font-family: var(--font-mono); font-size: var(--note-font, 13px);
       }
       /* Segmented control for window size. */
-      .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+      .seg { display: inline-flex; border: var(--hairline); border-radius: var(--radius); overflow: hidden; }
       .seg button {
         height: 26px; padding: 0 14px; border: 0; border-radius: 0; background: var(--field);
         color: var(--text); font: inherit; cursor: pointer;
@@ -177,6 +183,9 @@
       .migrate .mtext { min-width: 0; }
       .migrate .mact { display: flex; gap: 6px; flex: 0 0 auto; }
       .migrate button { height: 23px; padding: 0 11px; font-size: 11px; }
+      /* Done is the screen's one filled button; a notice's choice is outlined. */
+      .migrate button.primary { background: var(--field); color: var(--accent); }
+      .migrate button.primary:hover { background: var(--field-hover); }
       .restore-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
       .restore-row {
         display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; height: auto;
@@ -196,7 +205,7 @@
       .pathbar {
         flex: 0 0 auto; display: flex; align-items: center;
         padding: 5px 12px; border-top: 1px solid var(--line);
-        font: 11px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+        font: 11px/1.4 var(--font-mono);
         color: var(--muted); cursor: text;
       }
       .pathbar[hidden] { display: none; }
@@ -205,7 +214,7 @@
       .pathbar .pathcopy {
         flex: 0 0 auto; margin-left: 8px; width: 22px; height: 18px; padding: 0;
         display: inline-flex; align-items: center; justify-content: center;
-        color: var(--muted); background: transparent; border: 0; border-radius: 3px; cursor: pointer;
+        color: var(--muted); background: transparent; border: 0; border-radius: var(--radius); cursor: pointer;
       }
       .pathbar .pathcopy:hover { color: var(--text); background: var(--field); }
       .pathbar .pathcopy.ok { color: var(--accent); }
@@ -228,8 +237,8 @@
       body.zen.peek .dock { transform: none; }
       .zen-hint {
         position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
-        background: #14161a; color: var(--text); border: 1px solid var(--line);
-        padding: 5px 12px; border-radius: 14px; font-size: 11px; white-space: nowrap;
+        background: var(--ground); color: var(--text); border: var(--hairline);
+        padding: 5px 12px; border-radius: var(--radius); font-size: 11px; white-space: nowrap;
         opacity: 0; transition: opacity 0.35s; pointer-events: none; z-index: 30;
       }
       .zen-hint.show { opacity: 1; }
@@ -245,7 +254,7 @@
          Fixed width so the <select> doesn't balloon to its widest option. */
       .nb {
         font: inherit; color: var(--text); background: var(--field);
-        border: 1px solid var(--line); border-radius: 3px; height: 24px;
+        border: var(--hairline); border-radius: var(--radius); height: 24px;
         padding: 0 6px; width: 128px; flex: 0 0 auto;
       }
       .nb:hover { background: var(--field-hover); }
@@ -261,7 +270,7 @@
       .nbmenu {
         position: absolute; left: 0; bottom: calc(100% + 4px); z-index: 15;
         width: 240px; max-height: min(340px, calc(100vh - 56px)); overflow-y: auto;
-        background: #26292f; border: 1px solid var(--line); border-radius: 4px;
+        background: var(--ground-2); border: var(--hairline); border-radius: var(--radius);
         padding: 4px 0; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
       }
       .nbmenu[hidden] { display: none; }
@@ -271,7 +280,7 @@
         text-transform: uppercase; color: var(--muted);
       }
       .nbrow { display: flex; align-items: center; gap: 3px; padding: 0 6px 0 4px; height: 24px; }
-      .nbrow:hover { background: var(--field); }
+      .nbrow:hover { background: var(--line); }
       .nbrow button.nbpick {
         flex: 1 1 auto; min-width: 0; height: 22px; padding: 0 6px; text-align: left;
         background: transparent; border: 0; color: var(--text);
@@ -283,8 +292,8 @@
       button.sq {
         flex: 0 0 auto; width: 18px; height: 18px; padding: 0;
         display: inline-flex; align-items: center; justify-content: center;
-        border: 1px solid var(--line); border-radius: 2px;
-        background: var(--field); color: var(--muted);
+        border: var(--hairline); border-radius: var(--radius);
+        background: var(--ground); color: var(--muted);
       }
       button.sq:hover { color: var(--text); background: var(--field-hover); }
       button.sq svg { display: block; }
@@ -297,13 +306,22 @@
         padding-left: 10px; border-left: 1px solid var(--line);
       }
       button {
-        font: inherit; height: 24px; padding: 0 12px; border: 1px solid transparent;
-        border-radius: 3px; background: var(--field); color: var(--text); cursor: pointer;
+        font: 500 11px/1 var(--font-mono); text-transform: var(--button-case); letter-spacing: var(--button-tracking);
+        height: 24px; padding: 0 12px; border: var(--hairline);
+        border-radius: var(--radius); background: var(--field); color: var(--text); cursor: pointer;
       }
+      /* Names keep their own case and the sans; only action words go to capitals. */
+      button.nb, button.nbpick, button.name, .restore-row, .linkbtn {
+        font: 12px/1.3 var(--font-sans); text-transform: none; letter-spacing: normal;
+      }
+      .linkbtn { font-size: 11px; }
       button:hover { background: var(--field-hover); }
+      :focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+      textarea:focus-visible { outline: 0; }
       button:active { background: var(--field); }
-      /* Default action gets a thin accent frame, the way Live marks a selected control. */
-      button.primary { border-color: var(--accent); }
+      /* The default action takes the accent fill, one per screen (design system). */
+      button.primary { border-color: var(--accent); background: var(--accent); color: var(--bg); }
+      button.primary:hover { background: color-mix(in oklab, var(--accent) 85%, var(--ink)); }
       button.ghost { border-color: transparent; background: transparent; color: var(--muted); }
       button.ghost:hover { color: var(--text); background: var(--field); }
       button.icon.on { color: var(--accent); background: var(--field); }
@@ -312,9 +330,9 @@
       /* instant custom tooltip (native title has a ~1s delay we can't change) */
       [data-tip] { position: relative; }
       [data-tip]:hover::after, [data-tip]:focus-visible::after {
-        content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%;
-        transform: translateX(-50%); white-space: nowrap; background: #14161a; color: var(--text);
-        border: 1px solid var(--line); padding: 3px 7px; border-radius: 3px; font-size: 10px;
+        content: attr(data-tip); font-family: var(--font-sans); text-transform: none; letter-spacing: normal; font-weight: 400; position: absolute; bottom: calc(100% + 6px); left: 50%;
+        transform: translateX(-50%); white-space: nowrap; background: var(--ground); color: var(--text);
+        border: var(--hairline); padding: 3px 7px; border-radius: var(--radius); font-size: 10px;
         pointer-events: none; z-index: 10;
       }
       /* anchor edge tooltips inward so they never overflow the window - no wrapping */
@@ -939,7 +957,7 @@
           noticeButton("Restore", "primary", () => { pick = NOTICE.pick; post("restore"); });
           noticeButton("Keep the set's", "ghost", () => { pick = NOTICE.pick; post("keep"); });
         } else if (NOTICE.kind === "choose" && Array.isArray(NOTICE.options)) {
-          NOTICE.options.forEach((o, i) => noticeButton(o.label, i === 0 ? "primary" : "", () => { pick = { id: o.id, rev: o.rev }; post("restore"); }));
+          NOTICE.options.forEach((o, i) => noticeButton(o.label, (i === 0 ? "primary " : "") + "name", () => { pick = { id: o.id, rev: o.rev }; post("restore"); }));
         } else if (NOTICE.kind === "writeFailed") {
           noticeButton("Try again", "primary", () => post("save"));
           noticeButton("Dismiss", "ghost", hideNotice);

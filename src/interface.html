@@ -249,6 +249,45 @@
         padding: 0 6px; width: 128px; flex: 0 0 auto;
       }
       .nb:hover { background: var(--field-hover); }
+      /* Note picker: our own list, since a native <select> popup's height is up to
+         the OS inside Live's window. Opens upward from the bottom bar, shows about
+         12 notes, then scrolls. Each note row carries its own rename / delete
+         squares, each group header a + for a new note in that group. */
+      .picker { position: relative; flex: 0 0 auto; }
+      .picker > button.nb { display: flex; align-items: center; gap: 4px; text-align: left; }
+      .picker .nbname { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .picker .caret { flex: 0 0 auto; color: var(--muted); }
+      .picker.open [data-tip]::after { display: none; }
+      .nbmenu {
+        position: absolute; left: 0; bottom: calc(100% + 4px); z-index: 15;
+        width: 240px; max-height: min(340px, calc(100vh - 56px)); overflow-y: auto;
+        background: #26292f; border: 1px solid var(--line); border-radius: 4px;
+        padding: 4px 0; box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+      }
+      .nbmenu[hidden] { display: none; }
+      .nbhead {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 6px 6px 3px 10px; font-size: 10px; letter-spacing: 0.04em;
+        text-transform: uppercase; color: var(--muted);
+      }
+      .nbrow { display: flex; align-items: center; gap: 3px; padding: 0 6px 0 4px; height: 24px; }
+      .nbrow:hover { background: var(--field); }
+      .nbrow button.nbpick {
+        flex: 1 1 auto; min-width: 0; height: 22px; padding: 0 6px; text-align: left;
+        background: transparent; border: 0; color: var(--text);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .nbrow.on button.nbpick { color: var(--accent); font-weight: 600; }
+      .nbrow button.nbpick:hover { background: transparent; }
+      .nbsep { height: 1px; background: var(--line); margin: 4px 0; }
+      button.sq {
+        flex: 0 0 auto; width: 18px; height: 18px; padding: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        border: 1px solid var(--line); border-radius: 2px;
+        background: var(--field); color: var(--muted);
+      }
+      button.sq:hover { color: var(--text); background: var(--field-hover); }
+      button.sq svg { display: block; }
       .count { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
       /* Small mode is tight - drop the word count to keep Revert/Done roomy. */
       body.small .count { display: none; }
@@ -327,7 +366,10 @@
     </div>
     <div class="bar">
       <div class="left">
-        <select class="nb tip-left" id="notebook"></select>
+        <span class="picker" id="picker">
+          <button class="nb tip-left" id="notebook" type="button" aria-haspopup="listbox" aria-expanded="false"><span class="nbname" id="nbname"></span><svg class="caret" width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 6.5 L5 3.5 L8 6.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="nbmenu" id="nbmenu" role="listbox" hidden></div>
+        </span>
         <input class="nb" id="newnb" hidden placeholder="name this note" />
         <span class="tools">
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
@@ -451,7 +493,6 @@
       const modeBtn = document.getElementById("mode");
       const nbSelect = document.getElementById("notebook");
       const newNb = document.getElementById("newnb");
-      let renameOpt = null;   // the "Rename…" entry inside the dropdown
 
       // Every note is keyed "p:<name>" (session/project) or "g:<name>" (global),
       // so project and global names never collide. One unified picker for both.
@@ -467,7 +508,7 @@
 
       const scopeOf = (id) => id.slice(0, 1);
       const nameOf = (id) => id.slice(2);
-      const namesIn = (scope) => Object.keys(contents).filter((k) => scopeOf(k) === scope).map(nameOf).sort((a, b) => a.localeCompare(b));
+      const namesIn = (scope) => Object.keys(contents).filter((k) => scopeOf(k) === scope).map(nameOf).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
       // Set notes live inside the Set; their folder here is this computer's backup.
       const folderFor = (id) => (scopeOf(id) === "p" ? (STATE.backupDir || "") : (STATE.notebooksDir || ""));
 
@@ -477,36 +518,80 @@
       const projectDeletes = new Set(), globalDeletes = new Set(); // on-disk names to remove
       let nbMode = null;                                  // "rename" while the name field is open
 
-      // Rebuild the dropdown from `contents`: a project group, a Global Notes
-      // group, then the New / Rename / Delete actions.
+      const picker = document.getElementById("picker");
+      const nbName = document.getElementById("nbname");
+      const nbMenu = document.getElementById("nbmenu");
+      const ICON = {
+        plus: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1.5 V8.5 M1.5 5 H8.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+        rename: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5 L1.9 6.6 L6.9 1.6 L8.4 3.1 L3.4 8.1 Z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>',
+        del: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.2 2.2 L7.8 7.8 M7.8 2.2 L2.2 7.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+      };
+      const square = (icon, label, onClick) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "sq"; b.innerHTML = ICON[icon];
+        b.setAttribute("aria-label", label); b.title = label;
+        b.addEventListener("click", (e) => { e.stopPropagation(); closeMenu(); onClick(); });
+        return b;
+      };
+      // The picker button shows the open note; its tooltip is that note's folder.
       function rebuildSelect() {
-        nbSelect.innerHTML = "";
-        const addGroup = (label, ids) => {
-          if (!ids.length) return;
-          const og = document.createElement("optgroup");
-          og.label = label;
-          ids.forEach((id) => og.appendChild(new Option(nameOf(id), id)));
-          nbSelect.appendChild(og);
-        };
-        // Set notes are saved inside the Set itself; the SDK doesn't tell us its name.
-        if (hasProject) addGroup("This set", namesIn("p").map((n) => "p:" + n));
-        addGroup("Global notes", namesIn("g").map((n) => "g:" + n));
-        // A disabled option draws a separator line between the notes and the
-        // actions. Actions use all-emoji icons (same cell width) so they align.
-        // A disabled option draws a separator line between the notes and the
-        // actions. No leading glyphs - a native <select> can't align mismatched
-        // glyph widths, so plain text is the only reliably-aligned option.
-        const sep = new Option("──────────", "__sep__");
-        sep.disabled = true;
-        nbSelect.appendChild(sep);
-        if (hasProject) nbSelect.appendChild(new Option("New session note…", "__new__")); // project note
-        nbSelect.appendChild(new Option("New global note…", "__newnb__")); // global note
-        renameOpt = new Option("Rename note…", "__rename__");
-        nbSelect.appendChild(renameOpt);
-        nbSelect.appendChild(new Option("Delete note…", "__delete__"));
-        if (BACKUPS.length) nbSelect.appendChild(new Option("Restore from backup…", "__restore__"));
-        nbSelect.value = current;
+        nbName.textContent = nameOf(current);
         nbSelect.dataset.tip = folderFor(current);
+        if (!nbMenu.hidden) renderMenu();
+      }
+      // Set notes are saved inside the Set itself; the SDK doesn't tell us its name.
+      function renderMenu() {
+        nbMenu.innerHTML = "";
+        const group = (label, scope) => {
+          const head = document.createElement("div");
+          head.className = "nbhead";
+          const t = document.createElement("span");
+          t.textContent = label;
+          head.appendChild(t);
+          head.appendChild(square("plus", scope === "p" ? "New set note" : "New global note", () => { createNote(scope); enterRenameMode(); }));
+          nbMenu.appendChild(head);
+          for (const n of namesIn(scope)) {
+            const id = scope + ":" + n;
+            const row = document.createElement("div");
+            row.className = "nbrow" + (id === current ? " on" : "");
+            row.setAttribute("role", "option");
+            row.setAttribute("aria-selected", String(id === current));
+            const pick = document.createElement("button");
+            pick.type = "button"; pick.className = "nbpick"; pick.textContent = n;
+            pick.addEventListener("click", () => { closeMenu(); if (id !== current) selectValue(id); });
+            row.appendChild(pick);
+            row.appendChild(square("rename", "Rename " + n, () => { if (id !== current) selectValue(id); enterRenameMode(); }));
+            row.appendChild(square("del", "Delete " + n, () => { if (id !== current) selectValue(id); askDelete(); }));
+            nbMenu.appendChild(row);
+          }
+        };
+        if (hasProject) group("This set", "p");
+        group("Global notes", "g");
+        if (BACKUPS.length) {
+          const sep = document.createElement("div");
+          sep.className = "nbsep";
+          nbMenu.appendChild(sep);
+          const row = document.createElement("div");
+          row.className = "nbrow";
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "nbpick"; b.textContent = "Restore from backup…";
+          b.addEventListener("click", () => { closeMenu(); openRestore(); });
+          row.appendChild(b);
+          nbMenu.appendChild(row);
+        }
+      }
+      function openMenu() {
+        renderMenu();
+        nbMenu.hidden = false;
+        picker.classList.add("open");
+        nbSelect.setAttribute("aria-expanded", "true");
+        const on = nbMenu.querySelector(".nbrow.on");
+        if (on) on.scrollIntoView({ block: "nearest" });
+      }
+      function closeMenu() {
+        nbMenu.hidden = true;
+        picker.classList.remove("open");
+        nbSelect.setAttribute("aria-expanded", "false");
       }
       rebuildSelect();
 
@@ -514,8 +599,7 @@
         contents[current] = pad.value;   // stash edits before switching
         current = id;
         pad.value = contents[current] || "";
-        nbSelect.value = current;
-        nbSelect.dataset.tip = folderFor(current);
+        rebuildSelect();
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
         refreshScopeHint();
@@ -532,11 +616,12 @@
       }
 
       function showNbInput(prefill) {
-        nbSelect.hidden = true;
+        closeMenu();
+        picker.hidden = true;
         newNb.hidden = false; newNb.value = prefill || "";
         newNb.focus(); newNb.select();
       }
-      function hideNbInput() { newNb.hidden = true; nbSelect.hidden = false; }
+      function hideNbInput() { newNb.hidden = true; picker.hidden = false; }
 
       // New notes go into the project when one is open, otherwise into globals.
       function createNote(scope) {
@@ -598,15 +683,8 @@
         refreshHint();
       }
 
-      nbSelect.addEventListener("change", () => {
-        const v = nbSelect.value;
-        if (v === "__new__") { createNote("p"); enterRenameMode(); }
-        else if (v === "__newnb__") { createNote("g"); enterRenameMode(); }
-        else if (v === "__rename__") { nbSelect.value = current; enterRenameMode(); }
-        else if (v === "__delete__") { nbSelect.value = current; askDelete(); }
-        else if (v === "__restore__") { nbSelect.value = current; openRestore(); }
-        else selectValue(v);
-      });
+      nbSelect.addEventListener("click", () => (nbMenu.hidden ? openMenu() : closeMenu()));
+      document.addEventListener("mousedown", (e) => { if (!nbMenu.hidden && !picker.contains(e.target)) closeMenu(); });
       newNb.addEventListener("blur", () => { if (nbMode) commitNbInput(); });
       newNb.addEventListener("keydown", (e) => {
         if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); commitNbInput(); pad.focus(); }
@@ -1144,6 +1222,7 @@
       document.addEventListener("keydown", (e) => {
         const mod = e.metaKey || e.ctrlKey;
         const k = e.key.toLowerCase();
+        if (e.key === "Escape" && !nbMenu.hidden) { e.preventDefault(); closeMenu(); nbSelect.focus(); return; }
         if (e.key === "Escape" && !helpPanel.hidden) { e.preventDefault(); closeHelp(); return; }
         if (e.key === "Escape" && !settingsPanel.hidden) { e.preventDefault(); closeSettings(); return; }
         if (mod && (k === "s" || k === "w")) { e.preventDefault(); post("save"); return; }

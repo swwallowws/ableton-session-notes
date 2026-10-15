@@ -533,10 +533,11 @@
         b.addEventListener("click", (e) => { e.stopPropagation(); closeMenu(); onClick(); });
         return b;
       };
-      // The picker button shows the open note; its tooltip is that note's folder.
+      // The picker button shows the open note. Its tooltip says where the note
+      // lives: a set note's folder here is only a backup, so it names the set.
       function rebuildSelect() {
         nbName.textContent = nameOf(current);
-        nbSelect.dataset.tip = folderFor(current);
+        nbSelect.dataset.tip = scopeOf(current) === "p" ? "Saved inside this set" : folderFor(current);
         if (!nbMenu.hidden) renderMenu();
       }
       // Set notes are saved inside the Set itself; the SDK doesn't tell us its name.

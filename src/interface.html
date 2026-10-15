@@ -234,12 +234,12 @@
       }
       .zen-hint.show { opacity: 1; }
       /* Note picker + tools on the left, actions on the right; space-between keeps
-         a gap in the middle and respects the bar padding so Revert/Done stay clear
+         a gap in the middle and respects the bar padding so Cancel/Done stay clear
          of the edge. The fixed-width select keeps the left group from overflowing. */
       .left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; }
       .tools { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
       /* Meta tools (settings, help) sit in their own group, divided from the
-         per-note tools - mirroring the divider before Revert / Done. */
+         per-note tools - mirroring the divider before Cancel / Done. */
       .tools-meta { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--line); }
       /* Flat, boxy controls with a subtle frame and clear hover - Live's style.
          Fixed width so the <select> doesn't balloon to its widest option. */
@@ -289,9 +289,9 @@
       button.sq:hover { color: var(--text); background: var(--field-hover); }
       button.sq svg { display: block; }
       .count { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-      /* Small mode is tight - drop the word count to keep Revert/Done roomy. */
+      /* Small mode is tight - drop the word count to keep Cancel/Done roomy. */
       body.small .count { display: none; }
-      /* Divider sets the note controls apart from Revert / Done. */
+      /* Divider sets the note controls apart from Cancel / Done. */
       .actions {
         display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
         padding-left: 10px; border-left: 1px solid var(--line);
@@ -383,7 +383,7 @@
       </div>
       <div class="actions">
         <span class="count" id="count">0 words</span>
-        <button id="discard" class="tip-right" data-tip="Discard edits & close" aria-label="Revert">Revert</button>
+        <button id="discard" class="tip-right" data-tip="Discard edits & close" aria-label="Cancel">Cancel</button>
         <button id="save" class="primary tip-right" data-tip="Save & close (⌘S / Esc)" aria-label="Done">Done</button>
       </div>
     </div>

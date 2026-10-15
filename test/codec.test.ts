@@ -12,6 +12,8 @@ import {
   nextRev,
   revCounter,
   toBase16384,
+  toWave,
+  fromWave,
 } from "../src/codec.js";
 
 let passed = 0;
@@ -107,25 +109,32 @@ test("parts decode in any order", () => {
 
 test("each name starts with a readable label and the plain header", () => {
   const names = encodeBundle(bundle({ a: "x" }));
-  assert.match(names[0]!, /^Session Notes \(do not edit\) SN2 7f3k2q9a 1\/1 \d+ [A-Za-z0-9+/]+$/);
+  assert.match(names[0]!, /^Session Notes \(do not edit\) SN2 7f3k2q9a 1\/1 \d+ [▁-█]+$/);
 });
 
-test("names are plain ASCII, so the clips show no stray script in the take lane", () => {
+test("after the ASCII header the body is only waveform bars", () => {
   const b = bundle({ "Whole Again": "low sun 🎵 ü 中\n" + text(30000, 9) });
-  for (const n of encodeBundle(b)) assert.match(n, /^[\x20-\x7e]*$/);
+  for (const n of encodeBundle(b)) assert.match(n, /^[\x20-\x7e]+ [▁▂▃▄▅▆▇█]*$/);
+});
+
+test("waveform bars round-trip every length from 0 to 40", () => {
+  for (let n = 0; n <= 40; n++) {
+    const b = bytes(n, n + 100);
+    assert.deepEqual(fromWave(toWave(b), n), b, `length ${n}`);
+  }
 });
 
 test("a changed body character is reported as damaged, keeping the id", () => {
   const n = encodeBundle(bundle({ a: "hello there, low sun, high tide" }))[0]!;
   const k = n.length - 6;
-  const swapped = n.slice(0, k) + (n[k] === "A" ? "B" : "A") + n.slice(k + 1);
+  const swapped = n.slice(0, k) + (n[k] === "▁" ? "█" : "▁") + n.slice(k + 1);
   const { bundles, damaged } = decodeNames([swapped]);
   assert.deepEqual(bundles, []);
   assert.equal(damaged.length, 1);
   assert.equal(damaged[0]!.id, "7f3k2q9a");
 });
 
-test("a body character outside base64 is damaged", () => {
+test("a body character that isn't a bar is damaged", () => {
   const n = encodeBundle(bundle({ a: "hello" }))[0]!;
   const { bundles, damaged } = decodeNames([n.slice(0, -2) + "中" + n.slice(-1)]);
   assert.deepEqual(bundles, []);
@@ -173,8 +182,7 @@ test("a bundle that decompresses past the size limit is damaged, not loaded", ()
   const stream = Buffer.alloc(4 + packed.length);
   stream.writeUInt32BE(zlib.crc32(packed), 0);
   packed.copy(stream, 4);
-  const body = stream.toString("base64").replace(/=+$/, "");
-  const name = `Session Notes (do not edit) SN2 7f3k2q9a 1/1 ${stream.length} ${body}`;
+  const name = `Session Notes (do not edit) SN2 7f3k2q9a 1/1 ${stream.length} ${toWave(stream)}`;
   const { bundles, damaged } = decodeNames([name]);
   assert.equal(bundles.length, 0, "the oversized bundle must not load");
   assert.equal(damaged.length, 1);

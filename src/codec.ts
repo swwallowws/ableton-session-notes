@@ -1,9 +1,10 @@
 // Set notes travel inside the Set as clip names. Since Live 12.4.15b7 extensions
 // can't touch the project folder, so the notes are packed into the names of empty
-// clips on a take lane: JSON -> Brotli -> CRC32 -> base64 text, split into
-// chunks. Pure: no SDK, no file system, so it can be tested headlessly.
+// clips on a take lane: JSON -> Brotli -> CRC32 -> block bars (▁▂▃▄▅▆▇█, so
+// the data looks like a waveform), split into chunks. Pure: no SDK, no file
+// system, so it can be tested headlessly.
 //
-// One clip name: "Session Notes (do not edit) SN2 <id> <part>/<total> <byteLength> <chunk>".
+// One clip name: "Session Notes (do not edit) SN2 <id> <part>/<total> <byteLength> <bars>".
 // The label is what shows on the clip, and the header is plain ASCII so the id
 // and part count survive even if the body is damaged. The 0.3.0 beta wrote
 // "SN1 <id> ..." with a CJK (base16384) body: those still decode, and the next
@@ -31,7 +32,7 @@ const CHUNK = 16000;
 const BASE = 0x4e00; // legacy body: U+4E00..U+8DFF, 16,384 CJK ideographs
 const HEADER = /^Session Notes \(do not edit\) SN2 ([0-9a-z]{8}) (\d+)\/(\d+) (\d+) ([\s\S]*)$/;
 const LEGACY_HEADER = /^SN1 ([0-9a-z]{8}) (\d+)\/(\d+) (\d+) ([\s\S]*)$/;
-const BASE64 = /^[A-Za-z0-9+/]*$/;
+const BARS = "▁▂▃▄▅▆▇█"; // U+2581..U+2588, one per 3 bits
 // A Set can come from anyone: a few KB of Brotli can expand to gigabytes. Real
 // notes are far below this.
 const MAX_JSON = 8 * 1024 * 1024;
@@ -89,11 +90,41 @@ export function fromBase16384(s: string, byteLength: number): Uint8Array {
   return out;
 }
 
-function fromBase64(s: string, byteLength: number): Uint8Array {
-  // Buffer's decoder skips characters it doesn't know, so check first.
-  if (!BASE64.test(s)) throw new Error("character outside the alphabet");
-  const out = Buffer.from(s, "base64");
-  if (out.length !== byteLength) throw new Error("wrong length");
+// 3 bits per bar, so the clip name reads as a waveform.
+export function toWave(bytes: Uint8Array): string {
+  let out = "";
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = (acc << 8) | b;
+    bits += 8;
+    while (bits >= 3) {
+      bits -= 3;
+      out += BARS[(acc >>> bits) & 7];
+    }
+    acc &= (1 << bits) - 1;
+  }
+  if (bits > 0) out += BARS[(acc << (3 - bits)) & 7];
+  return out;
+}
+
+export function fromWave(s: string, byteLength: number): Uint8Array {
+  const out = new Uint8Array(byteLength);
+  let acc = 0;
+  let bits = 0;
+  let i = 0;
+  for (let k = 0; k < s.length && i < byteLength; k++) {
+    const v = BARS.indexOf(s[k]!);
+    if (v < 0) throw new Error("character outside the alphabet");
+    acc = (acc << 3) | v;
+    bits += 3;
+    if (bits >= 8) {
+      bits -= 8;
+      out[i++] = (acc >>> bits) & 0xff;
+    }
+    acc &= (1 << bits) - 1;
+  }
+  if (i < byteLength) throw new Error("too few characters");
   return out;
 }
 
@@ -109,7 +140,7 @@ export function encodeBundle(b: Bundle, chunkChars = CHUNK): string[] {
   const stream = Buffer.alloc(4 + packed.length);
   stream.writeUInt32BE(zlib.crc32(packed), 0);
   packed.copy(stream, 4);
-  const body = stream.toString("base64").replace(/=+$/, "");
+  const body = toWave(stream);
   const chunks: string[] = [];
   for (let i = 0; i < body.length; i += chunkChars) chunks.push(body.slice(i, i + chunkChars));
   if (!chunks.length) chunks.push("");
@@ -161,7 +192,7 @@ export function decodeNames(names: string[]): { bundles: Bundle[]; damaged: Dama
       let body = "";
       for (let p = 1; p <= g.total; p++) body += g.parts.get(p);
       if (g.byteLength > MAX_JSON) throw new Error("too long");
-      const stream = Buffer.from(g.legacy ? fromBase16384(body, g.byteLength) : fromBase64(body, g.byteLength));
+      const stream = Buffer.from(g.legacy ? fromBase16384(body, g.byteLength) : fromWave(body, g.byteLength));
       if (stream.length < 4) throw new Error("too short");
       const packed = stream.subarray(4);
       if (zlib.crc32(packed) !== stream.readUInt32BE(0)) throw new Error("checksum mismatch");

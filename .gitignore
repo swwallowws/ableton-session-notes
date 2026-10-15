@@ -8,3 +8,5 @@ vendor/
 !demo/vendor/
 demo-dist/
 .env
+# Throwaway sandbox storage spike (not shipped)
+spike/

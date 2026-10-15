@@ -55,7 +55,7 @@ Settings and the built-in help are a button away:
 Try it yourself: paste this into a note, switch to **View**, then press the send-to-arrangement button.
 
 ```markdown
-# Midnight Drive
+# Whole Again
 
 Key: A minor · 128 BPM · ref: that Bonobo track
 

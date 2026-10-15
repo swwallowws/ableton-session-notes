@@ -26,6 +26,9 @@ const MAGIC = "SN1 ";
 const CHUNK = 16000;
 const BASE = 0x4e00; // U+4E00..U+8DFF: 16,384 assigned CJK ideographs
 const HEADER = /^SN1 ([0-9a-z]{8}) (\d+)\/(\d+) (\d+) ([\s\S]*)$/;
+// A Set can come from anyone: a few KB of Brotli can expand to gigabytes. Real
+// notes are far below this.
+const MAX_JSON = 8 * 1024 * 1024;
 
 const B36 = "0123456789abcdefghijklmnopqrstuvwxyz";
 const randomB36 = (n: number) => Array.from({ length: n }, () => B36[randomInt(36)]).join("");
@@ -141,7 +144,8 @@ export function decodeNames(names: string[]): { bundles: Bundle[]; damaged: Dama
       if (stream.length < 4) throw new Error("too short");
       const packed = stream.subarray(4);
       if (zlib.crc32(packed) !== stream.readUInt32BE(0)) throw new Error("checksum mismatch");
-      const parsed = JSON.parse(zlib.brotliDecompressSync(packed).toString("utf8"));
+      const json = zlib.brotliDecompressSync(packed, { maxOutputLength: MAX_JSON });
+      const parsed = JSON.parse(json.toString("utf8"));
       if (!isBundle(parsed) || parsed.id !== id) throw new Error("not a version 1 bundle");
       bundles.push(parsed);
     } catch (e) {

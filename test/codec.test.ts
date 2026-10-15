@@ -1,6 +1,7 @@
 // Headless tests for src/codec.ts: Set notes bundled into clip names and back.
 // Run with: npm test
 import * as assert from "node:assert/strict";
+import * as zlib from "node:zlib";
 import {
   type Bundle,
   decodeNames,
@@ -141,6 +142,19 @@ test("a header-shaped name with a broken header is damaged with no id", () => {
   assert.deepEqual(bundles, []);
   assert.equal(damaged.length, 1);
   assert.equal(damaged[0]!.id, null);
+});
+
+test("a bundle that decompresses past the size limit is damaged, not loaded", () => {
+  // A crafted Set: 40 MB of JSON that compresses to a few KB.
+  const huge = JSON.stringify({ ...bundle({}), notes: { a: "x".repeat(40 * 1024 * 1024) } });
+  const packed = zlib.brotliCompressSync(Buffer.from(huge));
+  const stream = Buffer.alloc(4 + packed.length);
+  stream.writeUInt32BE(zlib.crc32(packed), 0);
+  packed.copy(stream, 4);
+  const name = `SN1 7f3k2q9a 1/1 ${stream.length} ${toBase16384(stream)}`;
+  const { bundles, damaged } = decodeNames([name]);
+  assert.equal(bundles.length, 0, "the oversized bundle must not load");
+  assert.equal(damaged.length, 1);
 });
 
 test("names that aren't data are ignored", () => {

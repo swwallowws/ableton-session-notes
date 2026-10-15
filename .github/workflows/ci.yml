@@ -31,6 +31,11 @@ jobs:
           npx --yes tsx@4 test/notes.test.ts
           npx --yes tsx@4 test/timeline.test.ts
           npx --yes tsx@4 test/demo-try.test.ts
+          npx --yes tsx@4 test/codec.test.ts
+          npx --yes tsx@4 test/reconcile.test.ts
+          npx --yes tsx@4 test/backups.test.ts
+          npx --yes tsx@4 test/setdata.test.ts
+          npx --yes tsx@4 test/session.test.ts
 
   readme:
     runs-on: ubuntu-latest

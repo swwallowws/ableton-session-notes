@@ -153,7 +153,7 @@ export function drawTimeline(
   track.append(ruler);
 
   const lane = node("div", "lane");
-  lane.append(node("span", "lane-name", "Lyrics"));
+  lane.append(node("span", "lane-name", "Session Notes"));
   if (mode === "locators") {
     for (const loc of locators) {
       const flag = node("div", "locator");

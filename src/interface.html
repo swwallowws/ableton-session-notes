@@ -1,31 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="night">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Session Notes</title>
+    <!-- The shared design system (~/Playground/design), inlined with its fonts
+         by build.ts. Night always: the pad sits inside Live's dark window. -->
+    <style>/*__TOKENS__*/</style>
     <style>
       :root {
-        /* Palette aligned to Live 12's default dark theme (a subtle cool-neutral:
-           main surface ~#2e3137, dark control fields ~#1d1f23). The writing area
-           is a dark field, the bar matches Live's surface, and buttons sit lighter
-           above it. Amber accent and blue text-selection are Live's own. */
-        --bg: #1f2228;          /* writing area - dark control field */
-        --surface: #2e3137;     /* bottom bar - surface tone */
-        --field: #43464e;       /* buttons / notebook selector (raised) */
-        --field-hover: #4c4f57;
-        --text: #b6b7bd;        /* control foreground */
-        --muted: #74767e;       /* disabled text */
-        --line: #16181c;        /* dark frame */
-        --accent: #e4e5e8;      /* accent (default / enabled) - colorless, brighter than text */
-        --select: #c9cace;      /* text selection - neutral */
+        /* The pad's names for the design system's tokens. */
+        --bg: var(--ground);          /* writing area */
+        --surface: var(--band);       /* bottom bar and strips */
+        --field: var(--ground-2);     /* buttons, picker, chips */
+        --field-hover: var(--line);
+        --text: var(--ink);
+        --muted: var(--ink-mut);
+        --accent: var(--acc);         /* no category: the ink */
+      }
+      /* Engines without light-dark() fall back to Paper; the pad is Night only. */
+      @supports not (color: light-dark(#000000, #ffffff)) {
+        :root {
+          --ground: #15121a; --ground-2: #1c1822; --band: #1a1620; --line: #2f2936;
+          --ink: #ece6ee; --ink-mut: #93899a; --acc: #ece6ee;
+        }
       }
       * { box-sizing: border-box; }
       html, body { height: 100%; margin: 0; }
       body {
         background: var(--bg);
         color: var(--text);
-        font: 11px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font: 12px/1.4 var(--font-sans); font-variant-numeric: tabular-nums;
         display: flex;
         flex-direction: column;
         -webkit-font-smoothing: antialiased;
@@ -35,30 +40,30 @@
         display: block; width: 100%; height: 100%;
         resize: none; background: transparent; color: var(--text);
         caret-color: var(--accent); border: 0; outline: 0;
-        padding: 14px 16px;
-        font: var(--note-font, 13px)/1.7 ui-monospace, "SF Mono", Menlo, monospace;
+        padding: 16px 24px;
+        font: var(--note-font, 13px)/1.7 var(--font-mono);
       }
       textarea::placeholder { color: var(--muted); }
-      textarea::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
-      .md ::selection { background: rgba(230, 231, 234, 0.22); color: var(--bg); }
+      textarea::selection { background: color-mix(in oklab, var(--acc) 35%, transparent); color: var(--ink); }
+      .md ::selection { background: color-mix(in oklab, var(--acc) 35%, transparent); color: var(--ink); }
 
-      .md { padding: 14px 16px; font-size: var(--note-font, 13px); line-height: 1.7; cursor: text; }
+      .md { padding: 16px 24px; font-size: var(--note-font, 13px); line-height: 1.7; cursor: text; }
       #preview { min-height: 100%; }   /* fill the view so the whole empty note is clickable */
       .md:empty::before { content: "Click here to start writing…"; color: var(--muted); }
-      .md h1, .md h2, .md h3 { font-weight: 600; line-height: 1.3; margin: 14px 0 6px; }
-      .md h1 { font-size: 17px; }
-      .md h2 { font-size: 15px; }
+      .md h1, .md h2, .md h3 { font-weight: 600; line-height: 1.3; margin: 16px 0 8px; }
+      .md h1 { font-size: 15px; }
+      .md h2 { font-size: 13px; }
       .md h3 { font-size: 13px; color: var(--muted); }
       .md > :first-child { margin-top: 0; }
-      .md p { margin: 0 0 10px; }
-      .md ul, .md ol { margin: 0 0 10px; padding-left: 20px; }
+      .md p { margin: 0 0 8px; }
+      .md ul, .md ol { margin: 0 0 8px; padding-left: 24px; }
       .md li { margin: 2px 0; }
-      .md li.task { list-style: none; margin-left: -18px; display: flex; align-items: baseline; gap: 7px; }
+      .md li.task { list-style: none; margin-left: -22px; display: flex; align-items: baseline; gap: 7px; }
       /* square checkbox, matching Ableton's boxy controls */
       .md li.task input {
         appearance: none; -webkit-appearance: none; margin: 0; cursor: pointer;
         flex: 0 0 auto; width: 13px; height: 13px; position: relative; top: 1px;
-        background: var(--field); border: 1px solid var(--muted); border-radius: 2px;
+        background: var(--field); border: 1px solid var(--muted); border-radius: var(--radius);
       }
       .md li.task input:checked { background: var(--accent); border-color: var(--accent); }
       .md li.task input:checked::after {
@@ -67,47 +72,46 @@
         border-width: 0 1.6px 1.6px 0; transform: rotate(45deg);
       }
       .md li.task.done { color: var(--muted); text-decoration: line-through; }
-      .md blockquote { margin: 0 0 10px; padding: 2px 0 2px 12px; border-left: 2px solid var(--field); color: var(--muted); }
-      .md code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #2a2d33; padding: 1px 4px; border-radius: 2px; }
+      .md blockquote { margin: 0 0 8px; padding: 0 0 0 16px; border-left: 2px solid var(--field); color: var(--muted); }
+      .md code { font-family: var(--font-mono); font-size: 12px; background: var(--band); padding: 1px 4px; border-radius: var(--radius); }
       .md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
       .md hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
       /* Lyric lines (recognised by their position tag, in View) - an accent rail
          plus a chip showing where the line lands, so it reads like a compiled
          result. Flow lines (untagged, inheriting the block's position) are dimmer. */
-      .md .lyric { display: flex; align-items: baseline; gap: 8px; margin: 2px 0; padding: 1px 0 1px 9px; border-left: 2px solid var(--accent); }
+      .md .lyric { display: flex; align-items: baseline; gap: 8px; margin: 2px 0; padding: 1px 0 1px 8px; border-left: 2px solid var(--accent); }
       .md .lyric.flow { border-left-color: var(--field); }
       .md .lyric-chip {
         flex: 0 0 auto; align-self: flex-start;
-        font: 10px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+        font: 10px/1.6 var(--font-mono);
         color: var(--accent); background: var(--field); border: 1px solid var(--line);
-        border-radius: 3px; padding: 0 5px; min-width: 30px; text-align: center;
+        border-radius: var(--radius); padding: 0 5px; min-width: 30px; text-align: center;
         white-space: nowrap; font-variant-numeric: tabular-nums;
       }
       .md .lyric.flow .lyric-chip { color: var(--muted); background: transparent; border-color: transparent; }
       .md .lyric-text { min-width: 0; }
 
       .help {
-        position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.45);
+        position: fixed; inset: 0; z-index: 20; background: color-mix(in oklab, var(--ground) 72%, transparent);
         display: flex; align-items: center; justify-content: center;
       }
       .help[hidden] { display: none; }
       .help-card {
-        background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
-        padding: 14px 16px; width: min(440px, 90%); max-height: 84%; overflow: auto;
-        box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+        background: var(--bg); border: var(--hairline); border-radius: var(--radius);
+        padding: 16px 24px 24px; width: min(456px, 90%); max-height: 84%; overflow: auto;
       }
-      .help-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-      .help-top strong { font-size: 13px; }
-      .help-how { color: var(--muted); margin: 0 0 12px; font-size: 12px; line-height: 1.55; }
+      .help-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+      .help-top strong { font-size: 13px; font-weight: 600; }
+      .help-how { color: var(--muted); margin: 0 0 16px; font-size: 12px; line-height: 1.55; }
       .help-cheat { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
       .help-cheat th {
-        text-align: left; color: var(--muted); font-weight: 500; font-size: 10px;
-        padding: 0 8px 6px;
+        text-align: left; font: 600 11px/1.3 var(--font-mono); text-transform: var(--button-case); letter-spacing: .04em; color: var(--muted);
+        padding: 0 8px 8px;
       }
-      .help-cheat td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: top; width: 50%; }
+      .help-cheat td { padding: 8px; border-top: 1px solid var(--line); vertical-align: top; width: 50%; }
       .help-cheat td.raw code {
-        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
-        background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
+        font-family: var(--font-mono); font-size: 11px;
+        background: var(--band); padding: 1px 5px; border-radius: var(--radius); color: var(--text);
         display: inline-block; line-height: 1.7;
       }
       /* Pin the cheatsheet's rendered size - the note font (--note-font) must only
@@ -123,88 +127,101 @@
       .help-cheat.narrow { width: 86%; }
       /* Divider makes the split between the Markdown cheatsheet and the lyrics
          section clearer. */
-      .help-sec { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
-      .help-sec > strong { display: block; font-size: 13px; margin-bottom: 6px; }
+      .help-sec { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--line); }
+      .help-sec > strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
       .help-list { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
       .help-list li { margin: 4px 0; }
       .help-list b { color: var(--text); }
       .help-how code, .help-cheat td.md code {
-        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
-        background: #2a2d33; padding: 1px 5px; border-radius: 2px; color: var(--text);
+        font-family: var(--font-mono); font-size: 11px;
+        background: var(--band); padding: 1px 5px; border-radius: var(--radius); color: var(--text);
       }
       /* ---- settings panel ---- */
       .set-row { margin-top: 16px; }
-      .set-row:first-of-type { margin-top: 4px; }
+      .set-row:first-of-type { margin-top: 0; }
       .set-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
-      .set-head label { font-size: 13px; font-weight: 600; color: var(--text); }
+      .set-head label { font: 600 11px/1.3 var(--font-mono); text-transform: var(--button-case); letter-spacing: .04em; color: var(--muted); }
       .set-val { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
       .set-val #fontVal { color: var(--text); }
-      .font-row { display: flex; align-items: center; gap: 10px; }
+      .font-row { display: flex; align-items: center; gap: 8px; }
       .linkbtn {
         height: auto; padding: 0; margin: 0; border: 0; background: transparent;
         color: var(--accent); font: inherit; font-size: 11px; cursor: pointer;
       }
       .linkbtn:hover { text-decoration: underline; background: transparent; }
-      /* Flat slider matching Live's controls. */
+      /* The design system's slider: a hairline that thickens under the hand. */
       .range {
-        -webkit-appearance: none; appearance: none; display: block; width: 150px; max-width: 100%; height: 4px;
-        background: var(--field); border: 1px solid var(--line); border-radius: 3px; outline: 0; cursor: pointer;
+        -webkit-appearance: none; appearance: none; display: block; width: 152px; max-width: 100%; height: 1px;
+        background: var(--ink-mut); border: 0; border-radius: var(--radius); outline: 0; cursor: pointer;
+        transition: height 0.1s;
       }
+      .range:hover, .range:focus-visible { height: 4px; }
       .range::-webkit-slider-thumb {
-        -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%;
-        background: var(--accent); border: 1px solid var(--line); cursor: pointer;
+        -webkit-appearance: none; appearance: none; width: 2px; height: 16px; border-radius: var(--radius);
+        background: var(--accent); border: 0; cursor: pointer;
       }
       .set-preview {
-        margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px;
+        margin-top: 8px; padding: 8px 16px; border: var(--hairline); border-radius: var(--radius);
         background: var(--bg); color: var(--text); line-height: 1.6;
-        font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--note-font, 13px);
+        font-family: var(--font-mono); font-size: var(--note-font, 13px);
       }
       /* Segmented control for window size. */
-      .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+      .seg { display: inline-flex; border: var(--hairline); border-radius: var(--radius); overflow: hidden; }
       .seg button {
-        height: 26px; padding: 0 14px; border: 0; border-radius: 0; background: var(--field);
-        color: var(--text); font: inherit; cursor: pointer;
+        height: 24px; padding: 0 16px; border: 0; border-radius: 0; background: var(--field);
+        color: var(--text); cursor: pointer;
       }
       .seg button + button { border-left: 1px solid var(--line); }
       .seg button:hover { background: var(--field-hover); }
       .seg button.on { background: var(--accent); color: var(--bg); }
       .migrate {
         flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
-        gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line);
-        background: var(--surface); font-size: 11px; line-height: 1.4; color: var(--text);
+        gap: 16px; padding: 8px 16px 8px 24px; border-top: var(--hairline);
+        background: var(--surface); font-size: 12px; line-height: 1.4; color: var(--text);
       }
       .migrate[hidden] { display: none; }
       .migrate .mtext { min-width: 0; }
-      .migrate .mact { display: flex; gap: 6px; flex: 0 0 auto; }
-      .migrate button { height: 23px; padding: 0 11px; font-size: 11px; }
+      .migrate .mact { display: flex; gap: 8px; flex: 0 0 auto; }
+      .migrate button { height: 24px; }
+      /* Done is the screen's one filled button; a notice's choice is outlined. */
+      .migrate button.primary { background: var(--field); color: var(--accent); }
+      .migrate button.primary:hover { border-color: var(--ink); }
+      .restore-list { display: flex; flex-direction: column; margin-top: 8px; }
+      .restore-row {
+        display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; height: auto; margin-top: -1px;
+        padding: 8px; text-align: left; border: var(--hairline);
+      }
+      .restore-row .rt { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .restore-row .rw { color: var(--muted); font-size: 10px; white-space: nowrap; }
+      .restore-row .rf { grid-column: 1 / -1; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       /* Passive info line - shown only while the Set is unsaved. */
       .hint {
         flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
-        padding: 7px 12px; border-top: 1px solid var(--line);
+        padding: 8px 16px 8px 24px; border-top: var(--hairline);
         background: var(--surface); font-size: 11px; line-height: 1.4; color: var(--muted);
       }
       .hint[hidden] { display: none; }
       .hint svg { flex: 0 0 auto; }
       .pathbar {
         flex: 0 0 auto; display: flex; align-items: center;
-        padding: 5px 12px; border-top: 1px solid var(--line);
-        font: 11px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+        padding: 8px 16px 8px 24px; border-top: var(--hairline);
+        font: 11px/1.4 var(--font-mono);
         color: var(--muted); cursor: text;
       }
       .pathbar[hidden] { display: none; }
       .pathbar .p { flex: 1 1 auto; overflow-x: auto; white-space: nowrap; user-select: text; scrollbar-width: none; }
       .pathbar .p::-webkit-scrollbar { display: none; }   /* hide scrollbar, keep scroll */
       .pathbar .pathcopy {
-        flex: 0 0 auto; margin-left: 8px; width: 22px; height: 18px; padding: 0;
+        flex: 0 0 auto; margin-left: 8px; width: 24px; height: 24px; padding: 0;
         display: inline-flex; align-items: center; justify-content: center;
-        color: var(--muted); background: transparent; border: 0; border-radius: 3px; cursor: pointer;
+        color: var(--muted); background: transparent; border: 0; border-radius: var(--radius); cursor: pointer;
       }
       .pathbar .pathcopy:hover { color: var(--text); background: var(--field); }
       .pathbar .pathcopy.ok { color: var(--accent); }
       .pathbar .pathcopy svg { display: block; }
       .bar {
-        display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        height: 34px; padding: 0 10px; border-top: 1px solid var(--line);
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        height: 40px; padding: 0 8px; border-top: var(--hairline);
         background: var(--surface); flex: 0 0 auto; user-select: none;
       }
       /* The dock holds the toolbar and any transient bars (path, timeline, …). */
@@ -219,55 +236,102 @@
       }
       body.zen.peek .dock { transform: none; }
       .zen-hint {
-        position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
-        background: #14161a; color: var(--text); border: 1px solid var(--line);
-        padding: 5px 12px; border-radius: 14px; font-size: 11px; white-space: nowrap;
+        position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+        background: var(--ground); color: var(--text); border: var(--hairline);
+        padding: 4px 16px; border-radius: var(--radius); font-size: 11px; white-space: nowrap;
         opacity: 0; transition: opacity 0.35s; pointer-events: none; z-index: 30;
       }
       .zen-hint.show { opacity: 1; }
       /* Note picker + tools on the left, actions on the right; space-between keeps
-         a gap in the middle and respects the bar padding so Revert/Done stay clear
+         a gap in the middle and respects the bar padding so Cancel/Done stay clear
          of the edge. The fixed-width select keeps the left group from overflowing. */
       .left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; }
-      .tools { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+      .tools { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
       /* Meta tools (settings, help) sit in their own group, divided from the
-         per-note tools - mirroring the divider before Revert / Done. */
-      .tools-meta { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--line); }
+         per-note tools - mirroring the divider before Cancel / Done. */
+      .tools-meta { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 8px; border-left: var(--hairline); }
       /* Flat, boxy controls with a subtle frame and clear hover - Live's style.
          Fixed width so the <select> doesn't balloon to its widest option. */
       .nb {
         font: inherit; color: var(--text); background: var(--field);
-        border: 1px solid var(--line); border-radius: 3px; height: 24px;
-        padding: 0 6px; width: 128px; flex: 0 0 auto;
+        border: var(--hairline); border-radius: var(--radius); height: 24px;
+        padding: 0 8px; width: 152px; flex: 0 0 auto;
       }
-      .nb:hover { background: var(--field-hover); }
-      .count { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-      /* Small mode is tight - drop the word count to keep Revert/Done roomy. */
+      .nb:hover { border-color: var(--ink); }
+      /* Note picker: our own list, since a native <select> popup's height is up to
+         the OS inside Live's window. Opens upward from the bottom bar, shows about
+         12 notes, then scrolls. Each note row carries its own rename / delete
+         squares, each group header a + for a new note in that group. */
+      .picker { position: relative; flex: 0 0 auto; }
+      .picker > button.nb { display: flex; align-items: center; gap: 4px; text-align: left; }
+      .picker .nbname { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .picker .caret { flex: 0 0 auto; color: var(--muted); }
+      /* A global note says so here, instead of a strip over the bar. */
+      .picker .nbtag { flex: 0 0 auto; font: 10px/1 var(--font-mono); color: var(--muted); }
+      .picker .nbtag[hidden] { display: none; }
+      .picker.open [data-tip]::after { display: none; }
+      .nbmenu {
+        position: absolute; left: 0; bottom: calc(100% + 4px); z-index: 15;
+        width: 240px; max-height: min(340px, calc(100vh - 56px)); overflow-y: auto;
+        background: var(--ground-2); border: var(--hairline); border-radius: var(--radius);
+        padding: 4px 0;
+      }
+      .nbmenu[hidden] { display: none; }
+      .nbhead {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 8px 8px 4px 12px; font: 600 11px/1.3 var(--font-mono); text-transform: var(--button-case); letter-spacing: .04em; color: var(--muted);
+      }
+      .nbrow { display: flex; align-items: center; gap: 4px; padding: 0 8px 0 4px; height: 24px; }
+      .nbrow:hover { background: var(--line); }
+      .nbrow button.nbpick {
+        flex: 1 1 auto; min-width: 0; height: 24px; padding: 0 8px; text-align: left;
+        background: transparent; border: 0; color: var(--text);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .nbrow.on button.nbpick { color: var(--accent); font-weight: 700; }
+      .nbrow button.nbpick:hover { background: transparent; }
+      .nbsep { height: 1px; background: var(--line); margin: 4px 0; }
+      button.sq {
+        flex: 0 0 auto; width: 18px; height: 18px; padding: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        border: var(--hairline); border-radius: var(--radius);
+        background: var(--ground); color: var(--muted);
+      }
+      button.sq:hover { color: var(--text); border-color: var(--ink); background: var(--ground); }
+      button.sq svg { display: block; }
+      .count { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      /* Small mode is tight - drop the word count to keep Cancel/Done roomy. */
       body.small .count { display: none; }
-      /* Divider sets the note controls apart from Revert / Done. */
+      /* Divider sets the note controls apart from Cancel / Done. */
       .actions {
         display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
-        padding-left: 10px; border-left: 1px solid var(--line);
+        padding-left: 8px; border-left: var(--hairline);
       }
       button {
-        font: inherit; height: 24px; padding: 0 12px; border: 1px solid transparent;
-        border-radius: 3px; background: var(--field); color: var(--text); cursor: pointer;
+        font: 12px/1 var(--font-sans);
+        height: 24px; padding: 0 12px; border: var(--hairline);
+        border-radius: var(--radius); background: var(--field); color: var(--text); cursor: pointer;
       }
-      button:hover { background: var(--field-hover); }
-      button:active { background: var(--field); }
-      /* Default action gets a thin accent frame, the way Live marks a selected control. */
-      button.primary { border-color: var(--accent); }
+      .linkbtn { font-size: 11px; }
+      button:hover { border-color: var(--ink); }
+      :focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
+      textarea:focus-visible { outline: 0; }
+      button:active { background: var(--band); }
+      /* The default action takes the accent fill, one per screen (design system). */
+      button.primary { border-color: var(--accent); background: var(--accent); color: var(--bg); font-weight: 700; }
+      button.primary:hover { border-color: var(--ink); }
       button.ghost { border-color: transparent; background: transparent; color: var(--muted); }
-      button.ghost:hover { color: var(--text); background: var(--field); }
-      button.icon.on { color: var(--accent); background: var(--field); }
-      button.icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; }
+      button.ghost:hover { color: var(--text); border-color: transparent; }
+      button.icon { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; }
+      .tools button.icon.ghost:hover { border-color: var(--line); color: var(--text); }
+      button.icon.on, .tools button.icon.ghost.on { color: var(--text); border-color: var(--line); background: var(--field); }
       button.icon svg { display: block; }
       /* instant custom tooltip (native title has a ~1s delay we can't change) */
       [data-tip] { position: relative; }
       [data-tip]:hover::after, [data-tip]:focus-visible::after {
-        content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%;
-        transform: translateX(-50%); white-space: nowrap; background: #14161a; color: var(--text);
-        border: 1px solid var(--line); padding: 3px 7px; border-radius: 3px; font-size: 10px;
+        content: attr(data-tip); font-family: var(--font-sans); text-transform: none; letter-spacing: normal; font-weight: 400; position: absolute; bottom: calc(100% + 6px); left: 50%;
+        transform: translateX(-50%); white-space: nowrap; background: var(--ground); color: var(--text);
+        border: var(--hairline); padding: 4px 8px; border-radius: var(--radius); font-size: 11px;
         pointer-events: none; z-index: 10;
       }
       /* anchor edge tooltips inward so they never overflow the window - no wrapping */
@@ -288,10 +352,7 @@
     <div class="dock" id="dock">
     <div class="migrate" id="migrate" hidden>
       <span class="mtext" id="mtext"></span>
-      <span class="mact">
-        <button id="mbring" class="primary">Bring notes</button>
-        <button id="mno" class="ghost">Not now</button>
-      </span>
+      <span class="mact" id="mact"></span>
     </div>
     <div class="migrate" id="confirm" hidden>
       <span class="mtext" id="ctext"></span>
@@ -310,11 +371,7 @@
     </div>
     <div class="hint" id="hint" hidden>
       <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
-      <span>Save your set to attach notes.</span>
-    </div>
-    <div class="hint" id="scopeHint" hidden>
-      <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="7.35" y="6.9" width="1.3" height="4.1" rx="0.4" fill="currentColor"/><rect x="7.35" y="4.4" width="1.3" height="1.4" rx="0.4" fill="currentColor"/></svg>
-      <span>This is a global note. It isn't tied to this set: it looks the same in every set.</span>
+      <span>Set notes are saved inside the set. Save the set to keep them.</span>
     </div>
     <div class="pathbar" id="pathbar" hidden>
       <span class="p" id="pathtext"></span>
@@ -322,7 +379,10 @@
     </div>
     <div class="bar">
       <div class="left">
-        <select class="nb tip-left" id="notebook"></select>
+        <span class="picker" id="picker">
+          <button class="nb tip-left" id="notebook" type="button" data-tip="Switch note" aria-label="Switch note" aria-haspopup="listbox" aria-expanded="false"><span class="nbname" id="nbname"></span><span class="nbtag" id="nbtag" hidden>global</span><svg class="caret" width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 6.5 L5 3.5 L8 6.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="nbmenu" id="nbmenu" role="listbox" hidden></div>
+        </span>
         <input class="nb" id="newnb" hidden placeholder="name this note" />
         <span class="tools">
           <button id="mode" class="icon ghost tip-left" data-tip="Edit (⌘E)" aria-label="Toggle edit / view"></button>
@@ -336,7 +396,7 @@
       </div>
       <div class="actions">
         <span class="count" id="count">0 words</span>
-        <button id="discard" class="tip-right" data-tip="Discard edits & close" aria-label="Revert">Revert</button>
+        <button id="discard" class="tip-right" data-tip="Discard edits & close" aria-label="Cancel">Cancel</button>
         <button id="save" class="primary tip-right" data-tip="Save & close (⌘S / Esc)" aria-label="Done">Done</button>
       </div>
     </div>
@@ -372,6 +432,17 @@
           <div class="set-head"><span class="set-label"><label>Zen Mode</label><span class="info tip-left" data-tip="Hides the toolbar for distraction-free writing (⌥⌘Z)" tabindex="0" role="img" aria-label="Zen Mode info"></span></span></div>
           <div class="seg"><button type="button" id="zenBtn" aria-label="Enter Zen Mode"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2.8" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="0.9" fill="currentColor"/></svg></button></div>
         </div>
+      </div>
+    </div>
+
+    <div class="help" id="restore" hidden>
+      <div class="help-card">
+        <div class="help-top">
+          <strong>Restore from backup</strong>
+          <button id="restoreClose" class="icon ghost" aria-label="Close restore">✕</button>
+        </div>
+        <p class="help-how">Notes this computer kept for each set, newest first. Pick one to open it here; <b>Done</b> saves it into this set.</p>
+        <div class="restore-list" id="restoreList"></div>
       </div>
     </div>
 
@@ -435,11 +506,11 @@
       const modeBtn = document.getElementById("mode");
       const nbSelect = document.getElementById("notebook");
       const newNb = document.getElementById("newnb");
-      let renameOpt = null;   // the "Rename…" entry inside the dropdown
 
       // Every note is keyed "p:<name>" (session/project) or "g:<name>" (global),
       // so project and global names never collide. One unified picker for both.
       const hasProject = !!(STATE && STATE.hasProject);
+      const BACKUPS = (STATE && Array.isArray(STATE.backups)) ? STATE.backups : [];
       const contents = {};
       if (STATE && STATE.projectNotes) for (const k in STATE.projectNotes) contents["p:" + k] = STATE.projectNotes[k];
       if (STATE && STATE.globalNotes) for (const k in STATE.globalNotes) contents["g:" + k] = STATE.globalNotes[k];
@@ -450,8 +521,9 @@
 
       const scopeOf = (id) => id.slice(0, 1);
       const nameOf = (id) => id.slice(2);
-      const namesIn = (scope) => Object.keys(contents).filter((k) => scopeOf(k) === scope).map(nameOf).sort((a, b) => a.localeCompare(b));
-      const folderFor = (id) => (scopeOf(id) === "p" ? (STATE.projectNotesDir || "") : (STATE.notebooksDir || ""));
+      const namesIn = (scope) => Object.keys(contents).filter((k) => scopeOf(k) === scope).map(nameOf).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+      // Set notes live inside the Set; their folder here is this computer's backup.
+      const folderFor = (id) => (scopeOf(id) === "p" ? (STATE.backupDir || "") : (STATE.notebooksDir || ""));
 
       const initialIds = new Set(Object.keys(contents));  // notes present on disk at load
       const createdThisSession = new Set();               // notes made in this session
@@ -459,36 +531,80 @@
       const projectDeletes = new Set(), globalDeletes = new Set(); // on-disk names to remove
       let nbMode = null;                                  // "rename" while the name field is open
 
-      // Rebuild the dropdown from `contents`: a project group, a Global Notes
-      // group, then the New / Rename / Delete actions.
+      const picker = document.getElementById("picker");
+      const nbName = document.getElementById("nbname");
+      const nbMenu = document.getElementById("nbmenu");
+      const ICON = {
+        plus: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1.5 V8.5 M1.5 5 H8.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+        rename: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5 L1.9 6.6 L6.9 1.6 L8.4 3.1 L3.4 8.1 Z" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>',
+        del: '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.2 2.2 L7.8 7.8 M7.8 2.2 L2.2 7.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+      };
+      const square = (icon, label, onClick) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "sq"; b.innerHTML = ICON[icon];
+        b.setAttribute("aria-label", label); b.title = label;
+        b.addEventListener("click", (e) => { e.stopPropagation(); closeMenu(); onClick(); });
+        return b;
+      };
+      // The picker button shows the open note. Where it lives is the folder
+      // button's job, so the tooltip only says what the button does.
       function rebuildSelect() {
-        nbSelect.innerHTML = "";
-        const addGroup = (label, ids) => {
-          if (!ids.length) return;
-          const og = document.createElement("optgroup");
-          og.label = label;
-          ids.forEach((id) => og.appendChild(new Option(nameOf(id), id)));
-          nbSelect.appendChild(og);
+        nbName.textContent = nameOf(current);
+        if (!nbMenu.hidden) renderMenu();
+      }
+      // Set notes are saved inside the Set itself; the SDK doesn't tell us its name.
+      function renderMenu() {
+        nbMenu.innerHTML = "";
+        const group = (label, scope) => {
+          const head = document.createElement("div");
+          head.className = "nbhead";
+          const t = document.createElement("span");
+          t.textContent = label;
+          head.appendChild(t);
+          head.appendChild(square("plus", scope === "p" ? "New set note" : "New global note", () => { createNote(scope); enterRenameMode(); }));
+          nbMenu.appendChild(head);
+          for (const n of namesIn(scope)) {
+            const id = scope + ":" + n;
+            const row = document.createElement("div");
+            row.className = "nbrow" + (id === current ? " on" : "");
+            row.setAttribute("role", "option");
+            row.setAttribute("aria-selected", String(id === current));
+            const pick = document.createElement("button");
+            pick.type = "button"; pick.className = "nbpick"; pick.textContent = n;
+            pick.addEventListener("click", () => { closeMenu(); if (id !== current) selectValue(id); });
+            row.appendChild(pick);
+            row.appendChild(square("rename", "Rename " + n, () => { if (id !== current) selectValue(id); enterRenameMode(); }));
+            row.appendChild(square("del", "Delete " + n, () => { if (id !== current) selectValue(id); askDelete(); }));
+            nbMenu.appendChild(row);
+          }
         };
-        // Ableton names project folders "<Set> Project"; drop the redundant suffix.
-        const projLabel = (STATE.projectName || "").replace(/ Project$/, "");
-        if (hasProject) addGroup("Set · " + projLabel, namesIn("p").map((n) => "p:" + n));
-        addGroup("Global notes", namesIn("g").map((n) => "g:" + n));
-        // A disabled option draws a separator line between the notes and the
-        // actions. Actions use all-emoji icons (same cell width) so they align.
-        // A disabled option draws a separator line between the notes and the
-        // actions. No leading glyphs - a native <select> can't align mismatched
-        // glyph widths, so plain text is the only reliably-aligned option.
-        const sep = new Option("──────────", "__sep__");
-        sep.disabled = true;
-        nbSelect.appendChild(sep);
-        if (hasProject) nbSelect.appendChild(new Option("New session note…", "__new__")); // project note
-        nbSelect.appendChild(new Option("New global note…", "__newnb__")); // global note
-        renameOpt = new Option("Rename note…", "__rename__");
-        nbSelect.appendChild(renameOpt);
-        nbSelect.appendChild(new Option("Delete note…", "__delete__"));
-        nbSelect.value = current;
-        nbSelect.dataset.tip = folderFor(current);
+        if (hasProject) group("This set", "p");
+        group("Global notes", "g");
+        if (BACKUPS.length) {
+          const sep = document.createElement("div");
+          sep.className = "nbsep";
+          nbMenu.appendChild(sep);
+          const row = document.createElement("div");
+          row.className = "nbrow";
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "nbpick"; b.textContent = "Restore from backup…";
+          b.addEventListener("click", () => { closeMenu(); openRestore(); });
+          row.appendChild(b);
+          nbMenu.appendChild(row);
+        }
+      }
+      function openMenu() {
+        renderMenu();
+        nbMenu.hidden = false;
+        picker.classList.add("open");
+        nbSelect.setAttribute("aria-expanded", "true");
+        const on = nbMenu.querySelector(".nbrow.on");
+        if (on) on.scrollIntoView({ block: "nearest" });
+      }
+      function closeMenu() {
+        nbMenu.hidden = true;
+        picker.classList.remove("open");
+        nbSelect.setAttribute("aria-expanded", "false");
       }
       rebuildSelect();
 
@@ -496,8 +612,7 @@
         contents[current] = pad.value;   // stash edits before switching
         current = id;
         pad.value = contents[current] || "";
-        nbSelect.value = current;
-        nbSelect.dataset.tip = folderFor(current);
+        rebuildSelect();
         if (!editing) renderPreview();
         refreshCount(); refreshPath();
         refreshScopeHint();
@@ -514,11 +629,12 @@
       }
 
       function showNbInput(prefill) {
-        nbSelect.hidden = true;
+        closeMenu();
+        picker.hidden = true;
         newNb.hidden = false; newNb.value = prefill || "";
         newNb.focus(); newNb.select();
       }
-      function hideNbInput() { newNb.hidden = true; nbSelect.hidden = false; }
+      function hideNbInput() { newNb.hidden = true; picker.hidden = false; }
 
       // New notes go into the project when one is open, otherwise into globals.
       function createNote(scope) {
@@ -580,14 +696,8 @@
         refreshHint();
       }
 
-      nbSelect.addEventListener("change", () => {
-        const v = nbSelect.value;
-        if (v === "__new__") { createNote("p"); enterRenameMode(); }
-        else if (v === "__newnb__") { createNote("g"); enterRenameMode(); }
-        else if (v === "__rename__") { nbSelect.value = current; enterRenameMode(); }
-        else if (v === "__delete__") { nbSelect.value = current; askDelete(); }
-        else selectValue(v);
-      });
+      nbSelect.addEventListener("click", () => (nbMenu.hidden ? openMenu() : closeMenu()));
+      document.addEventListener("mousedown", (e) => { if (!nbMenu.hidden && !picker.contains(e.target)) closeMenu(); });
       newNb.addEventListener("blur", () => { if (nbMode) commitNbInput(); });
       newNb.addEventListener("keydown", (e) => {
         if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); commitNbInput(); pad.focus(); }
@@ -819,18 +929,93 @@
         document.body.classList.toggle("peek", e.clientY >= revealFrom);
       });
 
-      // ---- "bring notes from another project" offer (after a Save As) ----
-      let dismissedMigration = false;
+      // ---- notice bar: what the host found when opening this Set ----
+      // newer: this computer has edits the Set never got (closed without saving)
+      // damaged: the Set's notes didn't decode; offer the last backup if any
+      // choose: the Set holds notes from two Sets (tracks pasted in)
+      // writeFailed: the last Done couldn't write into the Set (the backup has it)
+      let pick = null;                    // {id, rev} sent with "restore" / "keep"
       const migrate = document.getElementById("migrate");
-      if (STATE && STATE.migration) {
-        const n = STATE.migration.count;
-        document.getElementById("mtext").textContent =
-          "New set: bring your " + n + (n === 1 ? " note" : " notes") +
-          " from " + STATE.migration.fromName + " over?";
+      const mact = document.getElementById("mact");
+      const hideNotice = () => { migrate.hidden = true; };
+      function noticeButton(label, cls, fn) {
+        const b = document.createElement("button");
+        b.textContent = label;
+        if (cls) b.className = cls;
+        b.addEventListener("click", fn);
+        mact.appendChild(b);
+      }
+      const NOTICE = STATE && STATE.notice;
+      if (NOTICE && NOTICE.text) {
+        document.getElementById("mtext").textContent = NOTICE.text;
+        if (NOTICE.kind === "newer" && NOTICE.pick) {
+          noticeButton("Restore", "primary", () => { pick = NOTICE.pick; post("restore"); });
+          noticeButton("Keep the set's", "ghost", () => { pick = NOTICE.pick; post("keep"); });
+        } else if (NOTICE.kind === "choose" && Array.isArray(NOTICE.options)) {
+          NOTICE.options.forEach((o, i) => noticeButton(o.label, (i === 0 ? "primary " : "") + "name", () => { pick = { id: o.id, rev: o.rev }; post("restore"); }));
+        } else if (NOTICE.kind === "writeFailed") {
+          noticeButton("Try again", "primary", () => post("save"));
+          noticeButton("Dismiss", "ghost", hideNotice);
+        } else {
+          if (NOTICE.pick) noticeButton("Restore backup", "primary", () => { pick = NOTICE.pick; post("restore"); });
+          noticeButton("Dismiss", "ghost", hideNotice);
+        }
         migrate.hidden = false;
       }
-      document.getElementById("mbring").addEventListener("click", () => post("bring"));
-      document.getElementById("mno").addEventListener("click", () => { dismissedMigration = true; migrate.hidden = true; });
+
+      // ---- restore from a backup ----
+      // Every Set this computer has notes for, newest first, by title and first
+      // line (the SDK can't tell us Set names). Picking one shows its notes;
+      // Done writes them into this Set.
+      const restorePanel = document.getElementById("restore");
+      const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      function whenLabel(iso) {
+        const t = new Date(iso), now = new Date();
+        if (isNaN(t.getTime())) return "";
+        const hm = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+        const today = t.toDateString() === now.toDateString();
+        return today ? "today " + hm : t.getDate() + " " + MONTHS[t.getMonth()] + " " + hm;
+      }
+      function openRestore() {
+        const list = document.getElementById("restoreList");
+        list.innerHTML = "";
+        for (const b of BACKUPS) {
+          const row = document.createElement("button");
+          row.type = "button";
+          row.className = "restore-row";
+          const t = document.createElement("span"); t.className = "rt"; t.textContent = (b.titles || []).join(", ") || "Untitled";
+          const w = document.createElement("span"); w.className = "rw"; w.textContent = whenLabel(b.saved);
+          const f = document.createElement("span"); f.className = "rf"; f.textContent = b.firstLine || "";
+          row.append(t, w, f);
+          row.addEventListener("click", () => { pick = { id: b.id, rev: b.rev }; post("restore"); });
+          list.appendChild(row);
+        }
+        restorePanel.hidden = false;
+      }
+      const closeRestore = () => { restorePanel.hidden = true; };
+      document.getElementById("restoreClose").addEventListener("click", closeRestore);
+      restorePanel.addEventListener("click", (e) => { if (e.target === restorePanel) closeRestore(); });
+
+      // ---- drop .md files in as Set notes ----
+      // Notes older versions kept in a project's "Session Notes" folder can't be
+      // read by the extension any more; dropping the files here brings them in.
+      document.addEventListener("dragover", (e) => { e.preventDefault(); });
+      document.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const files = [...((e.dataTransfer && e.dataTransfer.files) || [])].filter((f) => /\.(md|markdown|txt)$/i.test(f.name));
+        let left = files.length;
+        files.forEach((f) => {
+          const r = new FileReader();
+          r.onload = () => {
+            contents[current] = pad.value;
+            const id = "p:" + uniqueName(f.name.replace(/\.(md|markdown|txt)$/i, ""), "p");
+            contents[id] = String(r.result || "");
+            createdThisSession.add(id);
+            if (--left === 0) { rebuildSelect(); selectValue(id); }
+          };
+          r.readAsText(f);
+        });
+      });
 
       // ---- send lyrics to the arrangement timeline ----
       // Lyric extraction (extractLyricLinesJS / classifyLyrics) is defined above,
@@ -879,23 +1064,18 @@
       tlLoc.addEventListener("click", () => sendTimeline("locators"));
       tlClip.addEventListener("click", () => sendTimeline("clips"));
 
-      // ---- unsaved-Set hint ----
-      // Until a Set is saved it lives in Ableton's transient "Untitled Project"
-      // folder (or none is detected), so notes aren't yet tied to a project.
-      // Surface that quietly; it clears itself once the Set is saved. Doesn't
-      // apply to a Global note (nothing to attach to a Set), so it's also
-      // scope-gated the same way scopeHint is - refreshHint() (defined later)
-      // keeps this in sync on every later note switch.
-      const pname = (STATE && STATE.projectName) || "";
-      const unsaved = !hasProject || pname === "Untitled Project" || / Temp Project$/.test(pname);
-      document.getElementById("hint").hidden = !(unsaved && !(STATE && STATE.migration) && scopeOf(current) === "p");
+      // ---- first-save hint ----
+      // Set notes are written into the Set on Done, and only reach the .als file
+      // when the Set is saved. Say so quietly until this Set holds notes. Doesn't
+      // apply to a Global note, so it's scope-gated like the global tag -
+      // refreshHint() (defined later) keeps this in sync on every note switch.
+      const unsaved = !(STATE && STATE.setHasData);
+      document.getElementById("hint").hidden = !(unsaved && !NOTICE && scopeOf(current) === "p");
 
-      // ---- global-note hint ----
-      // A Global note looks the same as a Project note once picked, with nothing
-      // else on screen saying which one it is. Say so plainly, same pattern as
-      // the unsaved-Set hint above. refreshScopeHint() (defined later, not
-      // called yet here) keeps this in sync on every later note switch.
-      document.getElementById("scopeHint").hidden = scopeOf(current) !== "g";
+      // ---- global tag ----
+      // A global note looks like a set note once picked, so the picker says
+      // "global" beside its name. refreshScopeHint() keeps it in sync.
+      document.getElementById("nbtag").hidden = scopeOf(current) !== "g";
 
       // ---- delete confirm ----
       const confirmBar = document.getElementById("confirm");
@@ -957,11 +1137,11 @@
         const dels = (set, map) => [...set].filter((nm) => !(nm in map));
         const payload = {
           action: action, current: current, size: size || (STATE && STATE.size) || "m", zoom: notePx,
-          dismissMigration: dismissedMigration,
           projectMap: projectMap, globalMap: globalMap,
           projectRenames: projectRenames, globalRenames: globalRenames,
           projectDeletes: dels(projectDeletes, projectMap), globalDeletes: dels(globalDeletes, globalMap),
         };
+        if (pick) payload.pick = pick;
         if (action === "timeline" && pendingTimeline) {
           payload.lines = pendingTimeline.lines;
           payload.timelineMode = pendingTimeline.mode;
@@ -1010,12 +1190,13 @@
       const revealBtn = document.getElementById("reveal");
       const pathbar = document.getElementById("pathbar");
       const pathtext = document.getElementById("pathtext");
-      const scopeHint = document.getElementById("scopeHint");
+      const nbTag = document.getElementById("nbtag");
       const unsavedHint = document.getElementById("hint");
       function sanitizeName(n) { return (n.replace(/[\/\\:*?"<>|]/g, "_").trim() || "Untitled"); }
       function currentFilePath() {
         let dir = folderFor(current);
         if (!dir) return "";
+        if (scopeOf(current) === "p") return dir;   // the Set's backup folder
         // A drive letter (C:...) or a UNC prefix means Windows regardless of which
         // separator the host handed back - the dev CLI forward-slashes every path
         // before the extension ever sees it, so "does dir contain a backslash" is
@@ -1030,12 +1211,18 @@
         if (isWindows) return (dir.replace(/\//g, "\\") + "\\" + name);
         return dir + "/" + name;
       }
-      function refreshPath() { if (!pathbar.hidden) pathtext.textContent = currentFilePath() || "(location unavailable)"; }
+      function refreshPath() {
+        if (pathbar.hidden) return;
+        const p = currentFilePath();
+        pathtext.textContent = !p ? "(location unavailable)"
+          : scopeOf(current) === "p" ? "Saved inside this set. Backup: " + p
+          : p;
+      }
       // Global notes aren't tied to any Set, so switching to one is easy to miss
       // against a Project note - say so plainly, the same way the unsaved-Set
       // hint does. Runs every time the selected note changes, not just once.
-      function refreshScopeHint() { scopeHint.hidden = scopeOf(current) !== "g"; }
-      function refreshHint() { unsavedHint.hidden = !(unsaved && !(STATE && STATE.migration) && scopeOf(current) === "p"); }
+      function refreshScopeHint() { nbTag.hidden = scopeOf(current) !== "g"; }
+      function refreshHint() { unsavedHint.hidden = !(unsaved && migrate.hidden && scopeOf(current) === "p"); }
       revealBtn.addEventListener("click", () => {
         pathbar.hidden = !pathbar.hidden;
         const showing = !pathbar.hidden;
@@ -1046,6 +1233,7 @@
       document.addEventListener("keydown", (e) => {
         const mod = e.metaKey || e.ctrlKey;
         const k = e.key.toLowerCase();
+        if (e.key === "Escape" && !nbMenu.hidden) { e.preventDefault(); closeMenu(); nbSelect.focus(); return; }
         if (e.key === "Escape" && !helpPanel.hidden) { e.preventDefault(); closeHelp(); return; }
         if (e.key === "Escape" && !settingsPanel.hidden) { e.preventDefault(); closeSettings(); return; }
         if (mod && (k === "s" || k === "w")) { e.preventDefault(); post("save"); return; }
@@ -1053,7 +1241,8 @@
           // Back out of a transient bottom strip first, rather than saving/closing.
           if (!confirmBar.hidden) { e.preventDefault(); confirmBar.hidden = true; return; }
           if (!tlbar.hidden) { e.preventDefault(); closeTimelineBar(); return; }
-          if (!migrate.hidden) { e.preventDefault(); dismissedMigration = true; migrate.hidden = true; return; }
+          if (!restorePanel.hidden) { e.preventDefault(); closeRestore(); return; }
+          if (!migrate.hidden) { e.preventDefault(); hideNotice(); refreshHint(); return; }
           e.preventDefault();
           if (editing) setMode(false);   // edit → back to View
           else post("save");             // View → save & close

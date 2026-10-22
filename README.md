@@ -2,23 +2,13 @@
 
 Simply sketch.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/session-notes-cover.png">
-  <source media="(prefers-color-scheme: light)" srcset="assets/session-notes-cover-light.png">
-  <img alt="Session Notes: notes that live with the set, lyrics that land on the arrangement. The lines of a verse settle onto the arrangement, one tagged [5]." src="assets/session-notes-cover.png" width="720">
-</picture>
+<img src="media/loop-night.gif" alt="Session Notes in Ableton Live: a tagged verse sent as clips onto the Session Notes track" width="720">
 
 **Notes that live with the set. Lyrics that land on the arrangement.**
 
 A Markdown notepad inside **Ableton Live 12**, built on the Ableton Live Extensions SDK. Jot lyrics, ideas and to-dos without leaving Ableton Live. Tag a lyric line with a bar or a time and send it straight onto the arrangement.
 
 > Requires Ableton Live 12.4.15 beta or later, with the Extensions feature (SDK `1.0.0-beta.0`).
-
-## In pictures
-
-<img src="media/loop-night.gif" alt="Session Notes in Ableton Live: a tagged verse sent as clips onto the Session Notes track" width="720">
-
-Files to share: [loop, MP4](media/loop-night.mp4) · [loop, GIF](media/loop-night.gif) · [still](media/loop-night.png)
 
 ## See it in action
 

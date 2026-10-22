@@ -10,73 +10,48 @@ Simply sketch.
 
 **Notes that live with the set. Lyrics that land on the arrangement.**
 
-A minimal Markdown notepad for **Ableton Live 12**, built on the [Ableton Live Extensions SDK](https://ableton.com). Jot lyrics, ideas, and to-dos without leaving Ableton Live, with clean, native-feeling typography and a render-by-default Markdown view. Tag a lyric line with a bar or timecode and drop it straight onto the arrangement.
+A Markdown notepad inside **Ableton Live 12**, built on the Ableton Live Extensions SDK. Jot lyrics, ideas and to-dos without leaving Ableton Live. Tag a lyric line with a bar or a time and send it straight onto the arrangement.
 
 > Requires Ableton Live 12.4.15 beta or later, with the Extensions feature (SDK `1.0.0-beta.0`).
 
-## In pictures
+## See it in action
 
-<img src="media/playground-paper.png" alt="Session Notes demo: a verse tagged [9] lands at bar 9 as clips on the Session Notes track" width="720">
+Tag the first line of a verse with where it goes. In **View**, each line shows its spot; open the send bar and pick **Locators** or **Clips**:
 
-Files to share: [still, Paper](media/playground-paper.png) · [still, Night](media/playground-night.png)
+| Tag a line | Send it |
+| :---: | :---: |
+| ![A verse in View: the first line tagged 0:08, the two lines under it following](assets/screenshots/pad-view.png) | ![The send bar: Send 3 lines to the arrangement, as Locators or Clips](assets/screenshots/pad-send.png) |
+
+**As locators**, named on the ruler:
+
+<img src="assets/screenshots/arrangement-locators.png" alt="Three locators on the arrangement ruler, named after the three lines of the verse" width="100%">
+
+**As clips**, on the Session Notes track:
+
+<img src="assets/screenshots/arrangement-clips.png" alt="Three clips on the Session Notes track, named after the three lines of the verse" width="100%">
+
+**Set notes and global notes** share one picker. Set notes belong to this set; global notes are in every set:
+
+<img src="assets/screenshots/pad-picker.png" alt="The note picker: This set holds Lyrics and Progress, Global notes holds Ideas, with Restore from backup at the bottom" width="360">
 
 ## Features
 
-- **Markdown, rendered by default.** Write in Markdown; a single tap or `⌘E` toggles between **View** and **Edit**. Headings, bullet/numbered lists, bold/italic, blockquotes, links, and clickable GFM task lists (`- [ ]` / `- [x]`).
-- **Lyrics on the arrangement.** Tag a lyric line with its position, then send the block to the arrangement as **locators** or **clips**. Positions can be a bar (`[17]`), a bar and beat (`[17.3]`), a timecode (`[1:04]`), or a bit of math (`[=8*4]`). Untagged lines under a tag flow one bar apart, and a blank line ends the block so your prose and to-dos are left alone.
+- **Markdown, rendered by default.** Write in Markdown; the pencil button or `⌘E` switches between **View** and **Edit**. Headings, bullet and numbered lists, bold and italic, blockquotes, links, and to-dos (`- [ ]` / `- [x]`) you can tick in View.
+- **Lyrics on the arrangement.** Tag a lyric line with its position, then send the block as **locators** or **clips**. A position can be a bar (`[17]`), a bar and beat (`[17.3]`), a time (`[1:04]`), or a bit of math (`[=8*4]`, `[=bpm]`). Untagged lines under a tag follow one bar apart, and a blank line ends the block, so your other notes and to-dos are left alone.
 - **Two kinds of notes:**
   - **Set notes** are saved inside the set and **travel with it**: Save As, moving or renaming the project folder, another computer, a collaborator. Keep as many as you like per set.
   - **Global notes** stay on this computer and are in every set.
-- **Manage notes in place.** The note picker lists **This set** and **Global notes**; create, rename, and delete notes right there.
+- **Manage notes in place.** The note picker lists **This set** and **Global notes**; create, rename and delete notes right there.
 - **Backups.** Every save also keeps a backup on this computer. **Restore from backup…** in the note picker brings back an earlier version.
-- **Settings panel.** Tune the note text size, pick a compact or default window, and flip on **Zen Mode** for distraction-free writing.
-- **Autosave on close.** Close the pad (**Done**, `⌘S`, or `Esc`) and it saves; **Cancel** discards edits made since you opened it.
-- **Remembers your place.** Reopens whatever note you had open last.
-- A built-in **Markdown & lyric-timing help** (the `?` button).
-
-## See it in action
-
-Write in Markdown, hit **View** to render it, then tag any lyric line with its position and send the block to the arrangement:
-
-| In the note (View) | Ready to send |
-| :---: | :---: |
-| ![A rendered verse tagged 0:08, the lines under it following on an accent rail](assets/screenshots/pad-view.png) | ![The same note with the send bar open, offering Locators or Clips](assets/screenshots/pad-send.png) |
-
-They land on the arrangement as named **locators** (on the ruler) or **clips** (on the Session Notes track), lined up to the bars and timecodes you tagged:
-
-| As locators | As clips |
-| :---: | :---: |
-| ![The verse as three named locators on the arrangement ruler](assets/screenshots/arrangement-locators.png) | ![The verse as three clips on the Session Notes track](assets/screenshots/arrangement-clips.png) |
-
-Set notes and global notes share one picker:
-
-<img src="assets/screenshots/pad-picker.png" alt="The note picker: This set holds Lyrics and Progress, Global notes holds Ideas, with Restore from backup at the bottom" width="480">
-
-Settings and the built-in help are a button away:
+- **Autosave on close.** **Done**, `⌘S` or `Esc` saves and closes; **Cancel** throws away the edits since you opened the pad.
+- **Remembers your place.** Reopens the note you had open last.
+- **File location.** The folder button shows where a global note's file is, or a set note's backup, with a button to copy the path.
+- **Settings.** Note text size, a compact or regular window, and **Zen Mode**, which hides the toolbar for distraction-free writing.
+- **Built-in help** (the `?` button) for Markdown and lyric timing.
 
 | Settings | Markdown help | Lyric-timing help |
 | :---: | :---: | :---: |
 | ![The settings panel with text size, window size, and Zen Mode](assets/screenshots/settings.png) | ![The Markdown help: what to type and what it renders as](assets/screenshots/help-markdown.png) | ![The lyric-timing help showing tag formats and where each one lands](assets/screenshots/help-lyrics.png) |
-
-Try it yourself: paste this into a note, switch to **View**, then press the send-to-arrangement button.
-
-```markdown
-# Whole Again
-
-Key: A minor · 128 BPM · ref: that Bonobo track
-
-- [x] Track the drums
-- [ ] Re-amp the bass on the second drop
-- [ ] Mix the vocal louder in the bridge
-
-Verse: keep it breathy, close-mic.
-
-[1] low sun, high tide
-swallow whole the off-key hums
-[1:04] then slowly fade from sight
-```
-
-The `#` heading, the prose line, and the to-dos are left out; only the tagged block is sent to the arrangement. The untagged `swallow whole the off-key hums` flows one bar after `[1]`.
 
 ## Install
 
@@ -86,7 +61,7 @@ The `#` heading, the prose line, and the to-dos are left out; only the tagged bl
 
 ## Usage notes
 
-- Open it from the right-click menu on an **audio/MIDI track, clip slot, or scene**. (The SDK has no global menu, so it attaches to the objects you can reach almost anywhere.)
+- Open it from the right-click menu on an **audio or MIDI track, clip slot, or scene**. (The SDK has no global menu, so it attaches to the things you can reach almost anywhere.)
 - **Where set notes live:** the first **Done** that saves set notes adds a MIDI track named **Session Notes** with no devices, so it never makes a sound. Its clips carry your notes, so keep the track. Lyric clips land on it too. A set that already has a **Lyrics** track from an earlier version keeps using that one.
 - After **Done**, Ableton Live shows the set as changed. Save the set to keep the notes in it; until then they're safe in the backup.
 - **Coming from 0.2.x:** global notes come across on their own. Ableton Live no longer lets extensions read project folders, so drag your old set notes (the `.md` files in a project's `Session Notes/` folder) onto the pad to add them.
@@ -100,11 +75,22 @@ Copy `.env.example` to `.env` and point `EXTENSION_HOST_PATH` at your local Able
 ```bash
 npm install
 npm start        # build + run in Ableton Live's Extension Host (Developer Mode must be ON)
+npm test         # every test file in test/
 npm run build    # dev bundle
 npm run package  # production bundle → Session-Notes-<version>.ablx
+npm run demo     # the web demo, served locally
 ```
 
-Node ≥ 22.11 is required (the SDK's minimum). Source lives in `src/extension.ts` (host logic) and `src/interface.html` (the webview UI).
+Node ≥ 22.11 is required (the SDK's minimum). The source is in `src/`:
+
+- `extension.ts`: the host side, wiring everything together
+- `interface.html`: the pad (the web view)
+- `session.ts`: opening and saving a set's notes
+- `setdata.ts` and `codec.ts`: reading and writing set notes as clips on the Session Notes track
+- `reconcile.ts`: deciding which notes the pad shows when the set and the backup differ
+- `backups.ts`: backups, Restore, and bringing notes across from older versions
+- `notes.ts`: global notes and the pad's saved state
+- `timeline.ts`: where each lyric line lands on the arrangement
 
 ## License
 

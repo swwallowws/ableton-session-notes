@@ -16,9 +16,9 @@ A Markdown notepad inside **Ableton Live 12**, built on the Ableton Live Extensi
 
 ## In pictures
 
-<a href="media/loop-night.mp4"><img src="media/loop-night.png" alt="Session Notes in Ableton Live: a tagged verse sent as clips onto the Session Notes track" width="720"></a>
+<img src="media/loop-night.gif" alt="Session Notes in Ableton Live: a tagged verse sent as clips onto the Session Notes track" width="720">
 
-Files to share: [loop](media/loop-night.mp4) · [still](media/loop-night.png)
+Files to share: [loop, MP4](media/loop-night.mp4) · [loop, GIF](media/loop-night.gif) · [still](media/loop-night.png)
 
 ## See it in action
 

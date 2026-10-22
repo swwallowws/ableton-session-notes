@@ -14,6 +14,12 @@ A Markdown notepad inside **Ableton Live 12**, built on the Ableton Live Extensi
 
 > Requires Ableton Live 12.4.15 beta or later, with the Extensions feature (SDK `1.0.0-beta.0`).
 
+## In pictures
+
+<a href="media/loop-night.mp4"><img src="media/loop-night.png" alt="Session Notes in Ableton Live: a tagged verse sent as clips onto the Session Notes track" width="720"></a>
+
+Files to share: [loop](media/loop-night.mp4) · [still](media/loop-night.png)
+
 ## See it in action
 
 Tag the first line of a verse with where it goes. In **View**, each line shows its spot; open the send bar and pick **Locators** or **Clips**:

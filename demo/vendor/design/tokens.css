@@ -60,10 +60,22 @@
   --button-case: uppercase;
   --button-tracking: 0.01em;
 
+  /* Type sizes. Body text reads at --text-body; labels, controls and helper
+     words (the smallest words anywhere) at --text-ui; only dense marks on a
+     strip or roll (bar numbers, chord names) go down to --text-dense. Small
+     and muted together read as cramped, so nothing a person reads goes lower. */
+  --text-body: 15px;
+  --text-ui: 14px;
+  --text-dense: 12px;
+
   --space: 8px;
   --radius: 0;
   --hairline: 1px solid var(--line);
 }
+
+/* Uncertainty: a guess the tool isn't sure of (a chord, a role) carries a
+   question mark in the quiet ink, a little dimmer than what it is sure of,
+   never the accent: the accent means "active / now" and reads as certain. */
 
 [data-theme="paper"] { color-scheme: light; }
 [data-theme="night"] { color-scheme: dark; }

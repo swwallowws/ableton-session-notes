@@ -92,7 +92,8 @@ export function render(els: ViewEls, opts: RenderOpts): void {
     );
     els.linesEl.append(li);
   });
-  els.countEl.textContent = lines.length === 1 ? "1 line" : `${lines.length} lines`;
+  // counts the lines that landed; until one does, it says nothing (not "0 lines" over three lines of text)
+  els.countEl.textContent = lines.length === 0 ? "" : lines.length === 1 ? "1 line" : `${lines.length} lines`;
   if (lines.length === 0) {
     els.linesEl.append(node("li", "empty mut", "No tagged lines yet. Start a line with [1]."));
   }

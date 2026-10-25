@@ -40,7 +40,7 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
   text-wrap: balance;
 }
 .demoshell-intro { max-width: 62ch; margin: calc(var(--space) * 2) 0 0; color: var(--ink-mut); }
-.demoshell-note { max-width: 62ch; margin: calc(var(--space) * 2) 0 0; font-size: 13px; color: var(--ink-mut); }
+.demoshell-note { max-width: 62ch; margin: calc(var(--space) * 2) 0 0; font-size: var(--text-ui); color: var(--ink-mut); }
 .demoshell-note a { color: var(--ink); text-decoration-color: var(--acc); text-underline-offset: 3px; }
 .demoshell-note a:focus-visible { outline: 1px solid var(--acc); outline-offset: 2px; }
 
@@ -75,11 +75,11 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
   display: grid;
   gap: calc(var(--space) / 2);
   margin: calc(var(--space) * 3) 0 0;
-  font: 12px/1.4 var(--font-sans);
+  font: 13px/1.4 var(--font-sans);
   color: var(--ink-mut);
 }
 .demoshell-keys:empty { display: none; }
-.demoshell-keys kbd { font: 500 11px/1.4 var(--font-mono); color: var(--ink); }
+.demoshell-keys kbd { font: 500 var(--text-dense)/1.4 var(--font-mono); color: var(--ink); }
 /* Touch-only screens have no keys to press. */
 @media (hover: none) and (pointer: coarse) { .demoshell-keys { display: none; } }
 
@@ -148,4 +148,4 @@ body:has(.demoshell) { margin: 0; background: var(--ground); }
 html.demoshell-embed, html.demoshell-embed body { background: transparent; }
 .demoshell[data-embed] { max-width: none; padding: 4px; }
 .demoshell[data-embed] .demoshell-rail { position: static; }
-.demoshell[data-embed] .demoshell-note { max-width: none; margin-top: calc(var(--space) * 2); font-size: 12px; }
+.demoshell[data-embed] .demoshell-note { max-width: none; margin-top: calc(var(--space) * 2); font-size: 13px; }

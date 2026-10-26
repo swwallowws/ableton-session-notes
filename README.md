@@ -16,7 +16,7 @@ Tag the first line of a verse with where it goes. In **View**, each line shows i
 
 | Tag a line | Send it |
 | :---: | :---: |
-| ![A verse in View: the first line tagged 0:08, the two lines under it following](assets/screenshots/pad-view.png) | ![The send bar: Send 3 lines to the arrangement, as Locators or Clips](assets/screenshots/pad-send.png) |
+| ![A verse in View: the first line tagged bar 4, the two lines under it following](assets/screenshots/pad-view.png) | ![The send bar: Send 3 lines to the arrangement, as Locators or Clips](assets/screenshots/pad-send.png) |
 
 **As locators**, named on the ruler:
 

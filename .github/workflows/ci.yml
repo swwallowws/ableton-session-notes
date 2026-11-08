@@ -20,7 +20,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # What a pull request touched, so each job below runs only when its part changed. On main
+  # every job runs, since the deploy needs them all.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ github.event_name != 'pull_request' || steps.code.outputs.code == 'true' }}
+      readme: ${{ github.event_name != 'pull_request' || steps.parts.outputs.readme == 'true' }}
+    steps:
+      # Any file but pictures, docs and the top-level notes (README.md, AGENTS.md...).
+      - id: code
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!media/**'
+              - '!docs/**'
+              - '!*.md'
+      - id: parts
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            readme:
+              - 'README.md'
+              - 'media/**'
+              - 'assets/**'
+              - '.github/workflows/ci.yml'
+
   test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +74,8 @@ jobs:
           npx --yes tsx@4 test/session.test.ts
 
   readme:
+    needs: changes
+    if: needs.changes.outputs.readme == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +85,8 @@ jobs:
           args: --no-progress --exclude-loopback --max-retries 3 --accept 200,206,429 README.md
 
   site:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

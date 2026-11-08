@@ -46,3 +46,5 @@ Check: CI on the push.
 |---|---|
 | `src/**`, `test/**` | `npm test` (CI runs the same files) |
 | `demo/**` | `npm run demo:build` |
+
+<!-- probe, never merged -->
